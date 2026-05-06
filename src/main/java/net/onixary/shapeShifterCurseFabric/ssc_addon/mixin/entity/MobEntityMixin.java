@@ -6,6 +6,7 @@ import net.minecraft.entity.mob.HuskEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.VexEntity;
 import net.minecraft.entity.mob.WitchEntity;
+import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.raid.RaiderEntity;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.SscAddon;
@@ -58,6 +59,18 @@ public abstract class MobEntityMixin {
 	@Inject(method = "setTarget", at = @At("HEAD"), cancellable = true)
 	private void ssc_addon$onSetTarget(LivingEntity target, CallbackInfo ci) {
 		if (target != null) {
+			MobEntity self = (MobEntity) (Object) this;
+			if (self instanceof IronGolemEntity golem
+					&& target instanceof PlayerEntity player
+					&& FormUtils.isAllaySP(player)) {
+				if (golem.getTarget() == player) {
+					golem.setTarget(null);
+				}
+				golem.setAngryAt(null);
+				golem.setAngerTime(0);
+				ci.cancel();
+				return;
+			}
 			if (target.hasStatusEffect(SscAddon.PLAYING_DEAD)) {
 				ci.cancel();
 				return;
@@ -66,7 +79,6 @@ public abstract class MobEntityMixin {
 				ci.cancel();
 				return;
 			}
-			MobEntity self = (MobEntity) (Object) this;
 			// 劫掠阵营不攻击女巫使魔
 			if ((self instanceof RaiderEntity || self instanceof VexEntity || self instanceof WitchEntity)
 					&& target instanceof WitchFamiliarEntity) {
