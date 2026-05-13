@@ -5,6 +5,7 @@ import net.minecraft.util.Identifier;
 public class FormIdentifiers {
 	public static final Identifier FAMILIAR_FOX_SP = new Identifier("my_addon", "familiar_fox_sp");
 	public static final Identifier FAMILIAR_FOX_RED = new Identifier("my_addon", "familiar_fox_red");
+	public static final Identifier FAMILIAR_FOX_MANCIANIMA = new Identifier("my_addon", "familiar_fox_mancianima");
 	public static final Identifier SNOW_FOX_SP = new Identifier("my_addon", "snow_fox_sp");
 	public static final Identifier ALLAY_SP = new Identifier("my_addon", "allay_sp");
 	public static final Identifier WILD_CAT_SP = new Identifier("my_addon", "wild_cat_sp");
@@ -40,6 +41,9 @@ public class FormIdentifiers {
 	// 金沙岚SP
 	public static final Identifier GOLDEN_SANDSTORM_SP = new Identifier("my_addon", "golden_sandstorm_sp");
 	public static final Identifier GOLDEN_SANDSTORM_COUNTER_BURST_CD = new Identifier("my_addon", "form_golden_sandstorm_sp_counter_burst_cd");
+	// 契灵 - 抗伤栏与无敌帧资源
+	public static final Identifier MANCIANIMA_RESISTANCE = new Identifier("my_addon", "form_mancianima_resistance");
+	public static final Identifier MANCIANIMA_IFRAMES = new Identifier("my_addon", "form_mancianima_iframes");
 	// 雪狐形态4个独立CD记录点（每个技能独立记录，按模式读取）
 	public static final Identifier SNOW_FOX_MELEE_PRIMARY_CD = new Identifier("my_addon", "form_snow_fox_sp_melee_primary_cd");
 	public static final Identifier SNOW_FOX_MELEE_SECONDARY_CD = new Identifier("my_addon", "form_snow_fox_sp_melee_secondary_cd");

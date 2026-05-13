@@ -191,7 +191,62 @@ public class SscAddonCommands {
 								.executes(SscAddonCommands::listBlockedSkills)
 						)
 				)
+				.then(CommandManager.literal("resistance")
+						.requires(source -> source.hasPermissionLevel(2))
+						.then(CommandManager.literal("get")
+								.executes(ctx -> resistanceGet(ctx, ctx.getSource().getPlayer()))
+								.then(CommandManager.argument("player", EntityArgumentType.player())
+										.executes(ctx -> resistanceGet(ctx, EntityArgumentType.getPlayer(ctx, "player")))
+								)
+						)
+						.then(CommandManager.literal("set")
+								.then(CommandManager.argument("value", IntegerArgumentType.integer(0))
+										.executes(ctx -> resistanceSet(ctx, ctx.getSource().getPlayer(), IntegerArgumentType.getInteger(ctx, "value")))
+										.then(CommandManager.argument("player", EntityArgumentType.player())
+												.executes(ctx -> resistanceSet(ctx, EntityArgumentType.getPlayer(ctx, "player"), IntegerArgumentType.getInteger(ctx, "value")))
+										)
+								)
+						)
+						.then(CommandManager.literal("add")
+								.then(CommandManager.argument("delta", IntegerArgumentType.integer())
+										.executes(ctx -> resistanceAdd(ctx, ctx.getSource().getPlayer(), IntegerArgumentType.getInteger(ctx, "delta")))
+										.then(CommandManager.argument("player", EntityArgumentType.player())
+												.executes(ctx -> resistanceAdd(ctx, EntityArgumentType.getPlayer(ctx, "player"), IntegerArgumentType.getInteger(ctx, "delta")))
+										)
+								)
+						)
+				)
 		);
+	}
+
+	// ============== /ssc_addon resistance ==============
+	private static int resistanceGet(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity player) {
+		if (player == null) { ctx.getSource().sendError(Text.literal("无目标玩家")); return 0; }
+		int cur = PowerUtils.getResourceValue(player, FormIdentifiers.MANCIANIMA_RESISTANCE);
+		int max = PowerUtils.getResourceMax(player, FormIdentifiers.MANCIANIMA_RESISTANCE);
+		ctx.getSource().sendFeedback(() -> Text.literal("§b[抵抗值]§r " + player.getName().getString() + " : " + cur + " / " + max), false);
+		return 1;
+	}
+
+	private static int resistanceSet(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity player, int value) {
+		if (player == null) { ctx.getSource().sendError(Text.literal("无目标玩家")); return 0; }
+		int max = PowerUtils.getResourceMax(player, FormIdentifiers.MANCIANIMA_RESISTANCE);
+		if (max <= 0) { ctx.getSource().sendError(Text.literal("该玩家未持有契灵抗伤 power（非契灵形态？）")); return 0; }
+		int clamped = Math.max(0, Math.min(value, max));
+		PowerUtils.setResourceValueAndSync(player, FormIdentifiers.MANCIANIMA_RESISTANCE, clamped);
+		ctx.getSource().sendFeedback(() -> Text.literal("§a[抵抗值]§r 设置 " + player.getName().getString() + " = " + clamped + " / " + max), true);
+		return 1;
+	}
+
+	private static int resistanceAdd(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity player, int delta) {
+		if (player == null) { ctx.getSource().sendError(Text.literal("无目标玩家")); return 0; }
+		int max = PowerUtils.getResourceMax(player, FormIdentifiers.MANCIANIMA_RESISTANCE);
+		if (max <= 0) { ctx.getSource().sendError(Text.literal("该玩家未持有契灵抗伤 power（非契灵形态？）")); return 0; }
+		int cur = PowerUtils.getResourceValue(player, FormIdentifiers.MANCIANIMA_RESISTANCE);
+		int next = Math.max(0, Math.min(cur + delta, max));
+		PowerUtils.setResourceValueAndSync(player, FormIdentifiers.MANCIANIMA_RESISTANCE, next);
+		ctx.getSource().sendFeedback(() -> Text.literal("§a[抵抗值]§r " + player.getName().getString() + " : " + cur + " → " + next + " / " + max), true);
+		return 1;
 	}
 
 	private static int setMana(CommandContext<ServerCommandSource> context, Collection<ServerPlayerEntity> targets, int amount) {

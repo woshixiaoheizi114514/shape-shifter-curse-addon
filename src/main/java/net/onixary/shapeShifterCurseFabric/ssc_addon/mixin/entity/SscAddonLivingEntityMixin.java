@@ -14,9 +14,11 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.GoldenSandstormRegen;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.AllaySPRangedHitPassive;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaMarkManager;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.power.EffectEfficiencyReductionPower;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormUtils;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.util.PowerUtils;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.UndeadNeutralState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -148,5 +150,72 @@ public abstract class SscAddonLivingEntityMixin {
 			);
 		}
 		return effect;
+	}
+
+	// ============== 契灵 - 抗伤值 / 无敌帧 / 恐惧伤害修正 ==============
+
+	/**
+	 * HEAD 注入：契灵抗伤值与无敌帧。
+	 * - 受害者是契灵 + iframes>0 → 取消伤害（不消耗抗伤）
+	 * - 受害者是契灵 + resistance>0 → 取消伤害+取消击退，消耗1抗伤，置iframes=4tick(0.2s)
+	 */
+	@Inject(method = "damage", at = @At("HEAD"), cancellable = true)
+	private void ssc_addon$mancianimaResistance(DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
+		LivingEntity self = (LivingEntity) (Object) this;
+		if (!(self instanceof ServerPlayerEntity sp)) return;
+		if (!FormUtils.isForm(sp, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)) return;
+		// 跳过虚空/直接击杀，避免BUG
+		if (source.isOf(DamageTypes.OUT_OF_WORLD) || source.isOf(DamageTypes.GENERIC_KILL)) return;
+		// 仅处理"由其它玩家/生物造成的伤害"（近战、远程、魔法）。
+		// 环境伤害（坠落、溺水、岩浆、火焰、窒息、仙人掌、饥饿等）的 attacker 为 null，将不抵挡也不进入战斗。
+		Entity attacker = source.getAttacker();
+		if (!(attacker instanceof LivingEntity) || attacker == sp) return;
+		// 受击 → 进入战斗状态（用于 15s 抗伤回复门槛）
+		MancianimaMarkManager.markCombat(sp.getUuid(), sp.getServerWorld().getTime());
+		int iframes = PowerUtils.getResourceValue(sp, FormIdentifiers.MANCIANIMA_IFRAMES);
+		if (iframes > 0) {
+			cir.setReturnValue(false);
+			return;
+		}
+		int resist = PowerUtils.getResourceValue(sp, FormIdentifiers.MANCIANIMA_RESISTANCE);
+		if (resist > 0) {
+			PowerUtils.setResourceValueAndSync(sp, FormIdentifiers.MANCIANIMA_RESISTANCE, resist - 1);
+			PowerUtils.setResourceValueAndSync(sp, FormIdentifiers.MANCIANIMA_IFRAMES, 4);
+			// 抵抗触发音效：铁砧落地（全场可听见，提示周围玩家）
+			sp.getServerWorld().playSound(null, sp.getX(), sp.getY(), sp.getZ(),
+					net.minecraft.sound.SoundEvents.BLOCK_ANVIL_LAND,
+					net.minecraft.sound.SoundCategory.PLAYERS, 0.6f, 1.6f);
+			cir.setReturnValue(false);
+		}
+	}
+
+	/**
+	 * 恐惧伤害修正：契灵 marker 对其红标受害者 +25%；红标受害者对 marker -25%。
+	 * 注入 applyDamage 调用点，可同时访问 DamageSource 和 amount。
+	 */
+	@ModifyArgs(method = "damage", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;applyDamage(Lnet/minecraft/entity/damage/DamageSource;F)V"))
+	private void ssc_addon$mancianimaFearAmount(Args args) {
+		LivingEntity self = (LivingEntity) (Object) this;
+		DamageSource source = args.get(0);
+		float amount = args.get(1);
+		Entity attacker = source.getAttacker();
+		// 攻击发生在契灵玩家身上 → 进入战斗（攻击方为契灵也算）
+		if (attacker instanceof ServerPlayerEntity ap && FormUtils.isForm(ap, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)) {
+			MancianimaMarkManager.markCombat(ap.getUuid(), ap.getServerWorld().getTime());
+		}
+		if (attacker instanceof ServerPlayerEntity ap
+				&& MancianimaMarkManager.isRedMarkedBy(ap.getUuid(), self.getUuid())) {
+			args.set(1, amount * 1.25f);
+			return;
+		}
+		if (self instanceof ServerPlayerEntity sp && attacker != null) {
+			java.util.UUID markerOf = MancianimaMarkManager.getMarkerOf(attacker.getUuid());
+			if (markerOf != null && markerOf.equals(sp.getUuid())) {
+				MancianimaMarkManager.Mark m = MancianimaMarkManager.getMark(sp.getUuid());
+				if (m != null && m.color == MancianimaMarkManager.MarkColor.RED) {
+					args.set(1, amount * 0.75f);
+				}
+			}
+		}
 	}
 }

@@ -1,0 +1,14 @@
+{
+    "type": "origins:conditioned_attribute",
+    "modifier": {
+        "attribute": "reach-entity-attributes:attack_range",
+        "operation": "multiply_total",
+        "value": -0.2,
+        "name": "Mancianima Weapon Attack Range Down"
+    },
+    "tick_rate": 5,
+    "condition": {
+        "type": "origins:equipped_item",
+        "equipment_slot": "mainhand"
+    }
+}

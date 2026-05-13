@@ -1,12 +1,14 @@
 package net.onixary.shapeShifterCurseFabric.ssc_addon.mixin.entity;
 
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.world.World;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.IronGolemOfferFlowerToAllayGoal;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormUtils;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -23,6 +25,15 @@ public abstract class IronGolemAllayFlowerMixin extends MobEntity {
 	@Inject(method = "initGoals", at = @At("TAIL"))
 	private void ssc_addon$addAllayFlowerGoal(CallbackInfo ci) {
 		this.goalSelector.add(6, new IronGolemOfferFlowerToAllayGoal((IronGolemEntity) (Object) this));
+		// 契灵：铁傀儡主动攻击契灵玩家
+		this.targetSelector.add(2, new ActiveTargetGoal<>(
+				(IronGolemEntity) (Object) this,
+				PlayerEntity.class,
+				10,
+				true,
+				false,
+				p -> p instanceof PlayerEntity pe && FormUtils.isForm(pe, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)
+		));
 	}
 
 	@Inject(method = "damage", at = @At("HEAD"), cancellable = true)

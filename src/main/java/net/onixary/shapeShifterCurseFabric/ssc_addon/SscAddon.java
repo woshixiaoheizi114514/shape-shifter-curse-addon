@@ -246,8 +246,10 @@ public class SscAddon implements ModInitializer {
 		registerEntitySpawnHandlers();
 		registerPlayerEventHandlers();
 		registerServerLifecycleHandlers();
+		registerMancianimaEvents();
 		AnubisWolfSpSoulEnergy.registerEvents();
 		GoldenSandstormRegen.init();
+		net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaMarkManager.register();
 	}
 
 
@@ -393,6 +395,11 @@ public class SscAddon implements ModInitializer {
 			// 在服务器线程上处理断线玩家的领域方块还原
 			if (world.getRegistryKey() == net.minecraft.world.World.OVERWORLD) {
 				AnubisWolfSpDeathDomain.tickCleanup();
+				// 契灵：每秒清理过期的恐惧减速 modifier
+				if (world.getServer().getTicks() % 20 == 0) {
+					net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive
+							.serverGlobalFleeCleanup(world.getServer());
+				}
 			}
 			for (net.minecraft.server.network.ServerPlayerEntity player : world.getPlayers()) {
 				// 修复局域网多人游戏中远程玩家的自定义可食用物品Map未在服务端刷新的问题
@@ -411,6 +418,7 @@ public class SscAddon implements ModInitializer {
 				GoldenSandstormErosionBrand.tick(player);
 				GoldenSandstormWitherSand.tick(player);
 				GoldenSandstormRegen.tick(player);
+				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive.tick(player);
 			}
 		});
 	}
@@ -429,6 +437,7 @@ public class SscAddon implements ModInitializer {
 			GoldenSandstormWitherSand.clearAll(server);
 			GoldenSandstormRegen.clearAll();
 			UndeadNeutralState.clearAll();
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive.clearAll();
 			net.onixary.shapeShifterCurseFabric.ssc_addon.action.SscAddonActions.clearAll();
 			System.out.println("[SSC_ADDON] SERVER_STARTING ability state cleared");
 		});
@@ -456,8 +465,72 @@ public class SscAddon implements ModInitializer {
 			GoldenSandstormWitherSand.clearAll(server);
 			GoldenSandstormRegen.clearAll();
 			UndeadNeutralState.clearAll();
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive.clearAll();
 			net.onixary.shapeShifterCurseFabric.ssc_addon.action.SscAddonActions.clearAll();
 			System.out.println("[SSC_ADDON] END_DATA_PACK_RELOAD ability state cleared");
+		});
+	}
+
+	/**
+	 * 契灵相关 Fabric 事件注册：
+	 * - 死亡事件：村民/商人击杀掉落 + 袭击目标完成检测
+	 * - 实体交互：唤魔者 + 下界之星 → 2 个不死图腾
+	 */
+	private void registerMancianimaEvents() {
+		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+			// 1. 袭击目标死亡检测
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive.onAssaultTargetDeath(entity);
+			// 2. 村民/商人 被契灵击杀 → 掉落
+			if (entity instanceof net.minecraft.entity.passive.MerchantEntity merchant
+					&& source.getAttacker() instanceof net.minecraft.server.network.ServerPlayerEntity killer
+					&& net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormUtils.isForm(killer,
+							net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)) {
+				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive
+						.onMerchantKilledByMancianima(merchant, killer);
+			}
+		});
+
+		// 唤魔者 + 下界之星 → 2 个不死图腾
+		net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
+			if (world.isClient()) return net.minecraft.util.ActionResult.PASS;
+			if (!(player instanceof net.minecraft.server.network.ServerPlayerEntity sp)) return net.minecraft.util.ActionResult.PASS;
+			if (!net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormUtils.isForm(sp,
+					net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)) {
+				return net.minecraft.util.ActionResult.PASS;
+			}
+			// 契灵不能与村民/商人交易
+			if (entity instanceof net.minecraft.entity.passive.MerchantEntity) {
+				return net.minecraft.util.ActionResult.FAIL;
+			}
+			if (!(entity instanceof net.minecraft.entity.mob.EvokerEntity)) return net.minecraft.util.ActionResult.PASS;
+			net.minecraft.item.ItemStack stack = sp.getStackInHand(hand);
+			if (!stack.isOf(net.minecraft.item.Items.NETHER_STAR)) return net.minecraft.util.ActionResult.PASS;
+			if (!sp.getAbilities().creativeMode) stack.decrement(1);
+			net.minecraft.item.ItemStack reward = new net.minecraft.item.ItemStack(net.minecraft.item.Items.TOTEM_OF_UNDYING, 2);
+			if (!sp.getInventory().insertStack(reward)) {
+				sp.dropItem(reward, false);
+			}
+			if (sp.getWorld() instanceof net.minecraft.server.world.ServerWorld sw) {
+				sw.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
+						net.minecraft.sound.SoundEvents.ENTITY_EVOKER_PREPARE_SUMMON,
+						sp.getSoundCategory(), 1.0f, 1.2f);
+			}
+			return net.minecraft.util.ActionResult.SUCCESS;
+		});
+
+		// 契灵敲钟触发村庄袭击（1 MC 天 1 次）
+		net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+			if (world.isClient()) return net.minecraft.util.ActionResult.PASS;
+			if (!(player instanceof net.minecraft.server.network.ServerPlayerEntity sp)) return net.minecraft.util.ActionResult.PASS;
+			if (!net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormUtils.isForm(sp,
+					net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)) {
+				return net.minecraft.util.ActionResult.PASS;
+			}
+			net.minecraft.block.BlockState state = world.getBlockState(hitResult.getBlockPos());
+			if (!(state.getBlock() instanceof net.minecraft.block.BellBlock)) return net.minecraft.util.ActionResult.PASS;
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive.tryTriggerAssaultByBell(sp);
+			// 让钟声照常播放
+			return net.minecraft.util.ActionResult.PASS;
 		});
 	}
 

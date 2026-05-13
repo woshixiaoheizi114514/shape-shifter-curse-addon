@@ -15,6 +15,7 @@
     "item.ItemEntityMixin",
     "entity.MobEntityMixin",
     "entity.IronGolemAllayFlowerMixin",
+    "entity.MancianimaProjectileMixin",
 
     "player.PlayerInventoryMixin",
     "player.PotionBagDeathDropMixin",

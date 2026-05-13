@@ -19,6 +19,8 @@ import net.onixary.shapeShifterCurseFabric.mana.ManaUtils;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.SscAddon;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ErosionBrandClientState;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.GoldenSandstormErosionBrand;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaMarkClientState;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaMarkManager;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.SkillBlocker;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.WhitelistUtils;
 
@@ -119,6 +121,39 @@ public class SscAddonConditions {
 						return ErosionBrandClientState.hasColor(target.getUuid(), color);
 					}
 					return false;
+				}));
+
+		// 契灵标记颜色条件 - 用于 entity_glow（黄/橙/红三档）
+		// 服务端：从 MancianimaMarkManager 查询；客户端：从 MancianimaMarkClientState 查询
+		registerBiEntity(new ConditionFactory<>(new Identifier("my_addon", "mancianima_mark_color"),
+				new SerializableData()
+						.add("color", SerializableDataTypes.STRING),
+				(data, pair) -> {
+					Entity actor = pair.getLeft();
+					Entity target = pair.getRight();
+					String color = data.getString("color");
+					if (actor instanceof ServerPlayerEntity) {
+						String c = MancianimaMarkManager.getColorString(actor.getUuid(), target.getUuid());
+						return c != null && c.equals(color);
+					}
+					if (actor.getWorld().isClient()) {
+						return MancianimaMarkClientState.hasColor(target.getUuid(), color);
+					}
+					return false;
+				}));
+
+		// 契灵准星目标条件（仅客户端有效）：用于绿色高亮覆盖
+		registerBiEntity(new ConditionFactory<>(new Identifier("my_addon", "mancianima_crosshair_target"),
+				new SerializableData(),
+				(data, pair) -> {
+					Entity actor = pair.getLeft();
+					Entity target = pair.getRight();
+					if (actor == null || target == null) return false;
+					// 仅在客户端、且 actor 是本地玩家时才查询
+					if (!actor.getWorld().isClient()) return false;
+					try {
+						return net.onixary.shapeShifterCurseFabric.ssc_addon.client.MancianimaCrosshairTracker.isCurrent(target.getUuid());
+					} catch (Throwable t) { return false; }
 				}));
 
 		// Skill blocking condition - returns true when skill is NOT blocked (normal behavior)

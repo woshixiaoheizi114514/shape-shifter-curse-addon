@@ -20,9 +20,12 @@ import net.minecraft.util.Identifier;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.SscAddon;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ErosionBrandClientState;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.GoldenSandstormErosionBrand;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaMarkClientState;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaMarkManager;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.client.mana.AllaySPManaBar;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.client.mana.AnubisWolfSPSoulBar;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.client.mana.SnowFoxSPManaBar;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.client.mana.MancianimaResistanceBar;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.client.hud.SkillCooldownBarRenderer;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.client.renderer.WaterSpearEntityRenderer;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.client.renderer.WitchFamiliarRenderer;
@@ -69,7 +72,11 @@ public class SscAddonClient implements ClientModInitializer {
 		// 客户端断线时清理侵蚀烙印缓存，防止重连后残留旧发光数据
 		ClientPlayConnectionEvents.DISCONNECT.register((handler2, client2) -> {
 			ErosionBrandClientState.clear();
+			MancianimaMarkClientState.clear();
 		});
+
+		// 注册契灵准星射线追踪（每客户端 tick 更新当前瞄准目标）
+		try { MancianimaCrosshairTracker.register(); } catch (Throwable t) { LOGGER.error("[SSC_ADDON] CrosshairTracker register failed", t); }
 
 		// 注册侵蚀烙印 S2C 同步包接收器
 		ClientPlayNetworking.registerGlobalReceiver(GoldenSandstormErosionBrand.PACKET_BRAND_SYNC, (client, handler, buf, responseSender) -> {
@@ -81,6 +88,18 @@ public class SscAddonClient implements ClientModInitializer {
 				brands.put(uuid, color);
 			}
 			client.execute(() -> ErosionBrandClientState.update(brands));
+		});
+
+		// 注册契灵标记 S2C 同步包接收器
+		ClientPlayNetworking.registerGlobalReceiver(MancianimaMarkManager.PACKET_MARK_SYNC, (client, handler, buf, responseSender) -> {
+			int count = buf.readInt();
+			java.util.Map<java.util.UUID, String> marks = new java.util.HashMap<>();
+			for (int i = 0; i < count; i++) {
+				java.util.UUID uuid = buf.readUuid();
+				String color = buf.readString();
+				marks.put(uuid, color);
+			}
+			client.execute(() -> MancianimaMarkClientState.update(marks));
 		});
 
 		ItemTooltipCallback.EVENT.register((stack, context, lines) -> {
@@ -121,6 +140,12 @@ public class SscAddonClient implements ClientModInitializer {
 		HudRenderCallback.EVENT.register(new AllaySPManaBar());
 		HudRenderCallback.EVENT.register(new AnubisWolfSPSoulBar());
 		HudRenderCallback.EVENT.register(new SkillCooldownBarRenderer());
+		HudRenderCallback.EVENT.register(new MancianimaResistanceBar());
+
+		// 契灵 - 次要技能瞬移：客户端按键监听 + 紫色粒子预览
+		MancianimaTeleportClient.register();
+		// 契灵 - 主要技能：三段标记
+		MancianimaPrimaryClient.register();
 
 		HandledScreens.register(SscAddon.POTION_BAG_SCREEN_HANDLER, PotionBagScreen::new);
 	}

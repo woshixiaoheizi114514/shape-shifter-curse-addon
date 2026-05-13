@@ -5,11 +5,13 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.HuskEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.VexEntity;
+import net.minecraft.entity.mob.WardenEntity;
 import net.minecraft.entity.mob.WitchEntity;
 import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.raid.RaiderEntity;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.SscAddon;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaAggroTracker;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.entity.WitchFamiliarEntity;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormUtils;
@@ -58,8 +60,15 @@ public abstract class MobEntityMixin {
 
 	@Inject(method = "setTarget", at = @At("HEAD"), cancellable = true)
 	private void ssc_addon$onSetTarget(LivingEntity target, CallbackInfo ci) {
+		MobEntity self = (MobEntity) (Object) this;
+		// 契灵：mob 自然丢失目标（vanilla setTarget(null)），清除激怒记录 → "逃离重置"
+		if (target == null) {
+			LivingEntity prev = self.getTarget();
+			if (prev instanceof PlayerEntity pp && FormUtils.isForm(pp, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)) {
+				MancianimaAggroTracker.forget(self.getUuid());
+			}
+		}
 		if (target != null) {
-			MobEntity self = (MobEntity) (Object) this;
 			if (self instanceof IronGolemEntity golem
 					&& target instanceof PlayerEntity player
 					&& FormUtils.isAllaySP(player)) {
@@ -102,6 +111,16 @@ public abstract class MobEntityMixin {
 			if (target instanceof PlayerEntity player
 					&& ssc_addon$shouldUndeadIgnore(self, player)) {
 				ci.cancel();
+				return;
+			}
+			// 契灵：mob 默认不主动攻击契灵，除非被激怒；坚守者/铁傀儡 不受此限制
+			if (target instanceof PlayerEntity player
+					&& FormUtils.isForm(player, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)
+					&& !(self instanceof WardenEntity)
+					&& !(self instanceof IronGolemEntity)) {
+				if (!MancianimaAggroTracker.isAngered(self.getUuid(), player.getUuid())) {
+					ci.cancel();
+				}
 			}
 		}
 	}

@@ -16,4 +16,18 @@ public class SSCAddonClientConfig implements ConfigData {
 
 	@ConfigEntry.Gui.Tooltip
 	public boolean showCdSeconds = true;
+
+	/**
+	 * 契灵 - 次要技能瞬移模式
+	 * RAYCAST: 直接朝着准星方向传送（按下立即传送，碰墙停止）
+	 * PLATFORM: 平台锁定模式（按下显示落点预览，松开后传送到锁定平台）
+	 */
+	@ConfigEntry.Gui.Tooltip
+	@ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
+	public MancianimaTeleportMode mancianimaTeleportMode = MancianimaTeleportMode.RAYCAST;
+
+	public enum MancianimaTeleportMode {
+		RAYCAST,
+		PLATFORM
+	}
 }
