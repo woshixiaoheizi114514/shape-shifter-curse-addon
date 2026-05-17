@@ -242,10 +242,14 @@ public class GoldenSandstormWitherSand {
 	 * 允许 server 为 null（静态列表仅清空）。
 	 */
 	public static void clearAll(net.minecraft.server.MinecraftServer server) {
+		// SERVER_STARTING 阶段 getPlayerManager() 可能尚未初始化，必须做空值检查
 		if (server != null) {
-			for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-				if (CHARGING_PLAYERS.containsKey(player.getUuid())) {
-					removeChargeSlow(player);
+			net.minecraft.server.PlayerManager pm = server.getPlayerManager();
+			if (pm != null) {
+				for (ServerPlayerEntity player : pm.getPlayerList()) {
+					if (CHARGING_PLAYERS.containsKey(player.getUuid())) {
+						removeChargeSlow(player);
+					}
 				}
 			}
 		}
