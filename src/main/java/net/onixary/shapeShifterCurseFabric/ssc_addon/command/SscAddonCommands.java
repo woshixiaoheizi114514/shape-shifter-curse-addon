@@ -984,8 +984,12 @@ default -> {
 
 	// ============== /ssc_addon palette ==============
 	// 读取当前玩家的 PlayerSkinComponent，把 8 个配色字段编成分享码，通过聊天发送（可点击复制）
+	// 设计要点：
+	//   1. 不设 .requires(permissionLevel)，所有玩家在不开作弊的存档中也能使用
+	//   2. 只对执行者本人生效（getPlayer()），不允许指定别的目标，避免被恶意改他人外观
+	//   3. 所有反馈消息使用 Text.translatable() 走 lang key，支持中英双语
 	private static int paletteExport(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity player) {
-		if (player == null) { ctx.getSource().sendError(Text.literal("无目标玩家")); return 0; }
+		if (player == null) { ctx.getSource().sendError(Text.translatable("ssc_addon.palette.only_self")); return 0; }
 		PlayerSkinComponent skin = RegPlayerSkinComponent.SKIN_SETTINGS.get(player);
 		FormTextureUtils.ColorSetting cs = skin.getFormColor();
 		// 主包内部存 ABGR，导出时要转回 RGBA 让 apply 那边解析后能直接喂给 setFormColor(int RGBA, ...)
@@ -997,24 +1001,26 @@ default -> {
 		String code = PaletteCodec.encode(primary, accent1, accent2, eyeA, eyeB,
 				cs.getPrimaryGreyReverse(), cs.getAccent1GreyReverse(), cs.getAccent2GreyReverse());
 
-		// 让代码可点击复制到剪贴板（点击会粘到聊天输入框，玩家可 Ctrl+A 复制）
+		// 让代码可点击复制到剪贴板
 		MutableText codeText = Text.literal(code).setStyle(Style.EMPTY
 				.withColor(Formatting.AQUA)
 				.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, code))
-				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("点击复制到剪贴板"))));
-		ctx.getSource().sendFeedback(() -> Text.literal("§a[配色分享码]§r 当前形态的配色代码：").append(codeText), false);
-		ctx.getSource().sendFeedback(() -> Text.literal("§7使用 §f/ssc_addon palette apply <代码>§7 即可一键应用。"), false);
+				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("ssc_addon.palette.export.copy_hover"))));
+		ctx.getSource().sendFeedback(() -> Text.translatable("ssc_addon.palette.export.header").append(codeText), false);
+		ctx.getSource().sendFeedback(() -> Text.translatable("ssc_addon.palette.export.hint"), false);
 		return 1;
 	}
 
 	// 解析分享码 → 调用 setFormColor(int*5 RGBA, bool*3)；AutoSyncedComponent 会自动同步到所有客户端
+	// 只允许作用于执行者本人，绝不接受 target 参数 — 防止"给别人乱改外观"的滥用
 	private static int paletteApply(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity player, String rawCode) {
-		if (player == null) { ctx.getSource().sendError(Text.literal("无目标玩家")); return 0; }
+		if (player == null) { ctx.getSource().sendError(Text.translatable("ssc_addon.palette.only_self")); return 0; }
 		PaletteCodec.PaletteData data;
 		try {
 			data = PaletteCodec.decode(rawCode);
-		} catch (IllegalArgumentException e) {
-			ctx.getSource().sendError(Text.literal("§c[配色分享码]§r 解析失败：" + e.getMessage()));
+		} catch (PaletteCodec.DecodeException e) {
+			ctx.getSource().sendError(Text.translatable("ssc_addon.palette.apply.failed",
+					Text.translatable(e.langKey, e.args)));
 			return 0;
 		}
 		PlayerSkinComponent skin = RegPlayerSkinComponent.SKIN_SETTINGS.get(player);
@@ -1025,7 +1031,7 @@ default -> {
 		skin.setEnableFormColor(true);
 		// 触发 AutoSyncedComponent 主动同步，确保其它客户端立即看到新配色
 		RegPlayerSkinComponent.SKIN_SETTINGS.sync(player);
-		ctx.getSource().sendFeedback(() -> Text.literal("§a[配色分享码]§r 已应用配色到 " + player.getName().getString()), true);
+		ctx.getSource().sendFeedback(() -> Text.translatable("ssc_addon.palette.apply.success"), false);
 		return 1;
 	}
 }

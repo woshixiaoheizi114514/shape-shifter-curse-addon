@@ -9,7 +9,7 @@ package net.onixary.shapeShifterCurseFabric.ssc_addon.palette;
  *
  * 格式：SSCA-RRGGBBAA-RRGGBBAA-RRGGBBAA-RRGGBBAA-RRGGBBAA-Y
  *   - 5 段 8 位 hex = primary / accent1 / accent2 / eyeA / eyeB（均为 RGBA）
- *   - 末尾 Y 为 1 位 hex（0–7），3 个位分别对应 primary/accent1/accent2 的 greyReverse
+ *   - 末尾 Y 为 1 位 hex（0-7），3 个位分别对应 primary/accent1/accent2 的 greyReverse
  *
  * 总长固定 56 字符，便于一行复制；前缀 SSCA- 防止误粘贴其它字符串。
  */
@@ -17,7 +17,18 @@ public final class PaletteCodec {
     private PaletteCodec() {}
 
     public static final String PREFIX = "SSCA-";
-    public static final int EXPECTED_LENGTH = 56; // SSCA- + 5*(8+1) + 1
+    public static final int EXPECTED_LENGTH = 56;
+
+    /** 解析异常：携带本地化 lang key + 参数，由命令层负责翻译展示。 */
+    public static class DecodeException extends RuntimeException {
+        public final String langKey;
+        public final Object[] args;
+        public DecodeException(String langKey, Object... args) {
+            super(langKey);
+            this.langKey = langKey;
+            this.args = args;
+        }
+    }
 
     /**
      * 编码 8 个字段为字符串。颜色参数为 RGBA 格式（高字节为 R）。
@@ -35,18 +46,20 @@ public final class PaletteCodec {
     }
 
     /**
-     * 解码字符串到数据对象。失败抛 IllegalArgumentException（含原因描述，可直接展示给玩家）。
+     * 解码字符串到数据对象。失败抛 DecodeException（含 lang key 与参数）。
      */
     public static PaletteData decode(String raw) {
-        if (raw == null) throw new IllegalArgumentException("配色代码为空");
+        if (raw == null || raw.trim().isEmpty()) throw new DecodeException("ssc_addon.palette.error.empty");
         String code = raw.trim().toUpperCase();
-        if (!code.startsWith(PREFIX)) throw new IllegalArgumentException("配色代码格式错误：缺少 SSCA- 前缀");
+        if (!code.startsWith(PREFIX)) throw new DecodeException("ssc_addon.palette.error.bad_prefix");
         String[] parts = code.substring(PREFIX.length()).split("-");
-        if (parts.length != 6) throw new IllegalArgumentException("配色代码段数错误：应为 5 颜色 + 1 标志位");
+        if (parts.length != 6) throw new DecodeException("ssc_addon.palette.error.bad_segments");
         for (int i = 0; i < 5; i++) {
-            if (parts[i].length() != 8) throw new IllegalArgumentException("第 " + (i + 1) + " 段颜色长度应为 8 位 hex");
+            if (parts[i].length() != 8) {
+                throw new DecodeException("ssc_addon.palette.error.bad_color_length", i + 1);
+            }
         }
-        if (parts[5].length() != 1) throw new IllegalArgumentException("标志位应为 1 位 hex");
+        if (parts[5].length() != 1) throw new DecodeException("ssc_addon.palette.error.bad_flag_length");
         try {
             int primary = parseHex8(parts[0]);
             int accent1 = parseHex8(parts[1]);
@@ -54,11 +67,11 @@ public final class PaletteCodec {
             int eyeA = parseHex8(parts[3]);
             int eyeB = parseHex8(parts[4]);
             int flags = Integer.parseInt(parts[5], 16);
-            if (flags < 0 || flags > 7) throw new IllegalArgumentException("标志位超出范围（应为 0-7）");
+            if (flags < 0 || flags > 7) throw new DecodeException("ssc_addon.palette.error.bad_flag_range");
             return new PaletteData(primary, accent1, accent2, eyeA, eyeB,
                     (flags & 1) != 0, (flags & 2) != 0, (flags & 4) != 0);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("hex 解析失败：" + e.getMessage());
+            throw new DecodeException("ssc_addon.palette.error.hex_parse", e.getMessage());
         }
     }
 
@@ -66,7 +79,6 @@ public final class PaletteCodec {
         return String.format("%08X", v);
     }
 
-    // 用 parseUnsignedInt 避免 0xFFxxxxxx 越界
     private static int parseHex8(String s) {
         return Integer.parseUnsignedInt(s, 16);
     }
