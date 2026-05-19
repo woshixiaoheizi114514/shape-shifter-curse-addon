@@ -109,32 +109,9 @@ public class SscAddonCommands {
 						.requires(source -> source.hasPermissionLevel(2))
 						.executes(SscAddonCommands::reloadConfig)
 				)
-				.then(CommandManager.literal("whitelist")
-						.requires(source -> source.hasPermissionLevel(2))
-						.then(CommandManager.literal("add")
-								.then(CommandManager.argument("allayPlayer", EntityArgumentType.player())
-										.then(CommandManager.argument("targetPlayer", EntityArgumentType.player())
-												.executes(SscAddonCommands::allayWhitelistAdd)
-										)
-								)
-						)
-						.then(CommandManager.literal("remove")
-								.then(CommandManager.argument("allayPlayer", EntityArgumentType.player())
-										.then(CommandManager.argument("targetPlayer", EntityArgumentType.player())
-												.executes(SscAddonCommands::allayWhitelistRemove)
-										)
-								)
-						)
-						.then(CommandManager.literal("list")
-								.then(CommandManager.argument("allayPlayer", EntityArgumentType.player())
-										.executes(SscAddonCommands::allayWhitelistList)
-								)
-						)
-						.then(CommandManager.literal("clear")
-								.then(CommandManager.argument("allayPlayer", EntityArgumentType.player())
-										.executes(SscAddonCommands::allayWhitelistClear)
-								)
-						)
+				// 玩家自助白名单 GUI（无 OP 限制，仅作用于调用者自己）
+				.then(CommandManager.literal("my_whitelist")
+						.executes(SscAddonCommands::openWhitelistGui)
 				)
 				.then(CommandManager.literal("skill")
 						.requires(source -> source.hasPermissionLevel(2))
@@ -607,94 +584,21 @@ public class SscAddonCommands {
 	}
 
 	// ===== SP悦灵治疗白名单命令 =====
+	// 旧的 /ssc_addon whitelist add/remove/list/clear 系列指令已被 my_whitelist GUI 取代，
+	// 相关私有方法已删除以减少代码维护面。
 
 	/**
-	 * 添加玩家到SP悦灵的治疗白名单
-	 * /ssc_addon allay_whitelist add <allayPlayer> <targetPlayer>
+	 * 打开玩家自助白名单 GUI（无 OP 限制，仅作用于调用者本人）。
+	 * 服务端通过 S2C 包推送当前白名单数据给客户端，由客户端打开 WhitelistManageScreen。
+	 * 控制台 / 命令方块调用会返回错误。
 	 */
-	private static int allayWhitelistAdd(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-		ServerPlayerEntity allayPlayer = EntityArgumentType.getPlayer(context, "allayPlayer");
-		ServerPlayerEntity targetPlayer = EntityArgumentType.getPlayer(context, "targetPlayer");
-
-		boolean added = net.onixary.shapeShifterCurseFabric.ssc_addon.ability.AllaySPGroupHeal.addToWhitelist(allayPlayer, targetPlayer);
-
-		if (added) {
-			context.getSource().sendFeedback(() -> Text.literal(
-					"已将 " + targetPlayer.getName().getString() + " 添加到 " + allayPlayer.getName().getString() + " 的白名单"
-			).formatted(Formatting.GREEN), true);
-		} else {
-			context.getSource().sendFeedback(() -> Text.literal(
-					targetPlayer.getName().getString() + " 已在 " + allayPlayer.getName().getString() + " 的白名单中"
-			).formatted(Formatting.YELLOW), false);
-		}
-		return 1;
-	}
-
-	/**
-	 * 从SP悦灵的治疗白名单中移除玩家
-	 * /ssc_addon allay_whitelist remove <allayPlayer> <targetPlayer>
-	 */
-	private static int allayWhitelistRemove(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-		ServerPlayerEntity allayPlayer = EntityArgumentType.getPlayer(context, "allayPlayer");
-		ServerPlayerEntity targetPlayer = EntityArgumentType.getPlayer(context, "targetPlayer");
-
-		boolean removed = net.onixary.shapeShifterCurseFabric.ssc_addon.ability.AllaySPGroupHeal.removeFromWhitelist(allayPlayer, targetPlayer);
-
-		if (removed) {
-			context.getSource().sendFeedback(() -> Text.literal(
-					"已将 " + targetPlayer.getName().getString() + " 从 " + allayPlayer.getName().getString() + " 的白名单中移除"
-			).formatted(Formatting.GREEN), true);
-		} else {
-			context.getSource().sendFeedback(() -> Text.literal(
-					targetPlayer.getName().getString() + " 不在 " + allayPlayer.getName().getString() + " 的白名单中"
-			).formatted(Formatting.YELLOW), false);
-		}
-		return 1;
-	}
-
-	/**
-	 * 列出SP悦灵的治疗白名单
-	 * /ssc_addon allay_whitelist list <allayPlayer>
-	 */
-	private static int allayWhitelistList(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-		ServerPlayerEntity allayPlayer = EntityArgumentType.getPlayer(context, "allayPlayer");
-
-		java.util.List<UUID> uuids = net.onixary.shapeShifterCurseFabric.ssc_addon.ability.AllaySPGroupHeal.getWhitelistUuids(allayPlayer);
-
-		if (uuids.isEmpty()) {
-			context.getSource().sendFeedback(() -> Text.literal(
-					allayPlayer.getName().getString() + " 的白名单为空"
-			).formatted(Formatting.YELLOW), false);
+	private static int openWhitelistGui(CommandContext<ServerCommandSource> context) {
+		ServerPlayerEntity player = context.getSource().getPlayer();
+		if (player == null) {
+			context.getSource().sendError(Text.translatable("command.ssc_addon.whitelist.gui.console_only"));
 			return 0;
 		}
-
-		context.getSource().sendFeedback(() -> Text.literal(
-				"===== " + allayPlayer.getName().getString() + " 的白名单 (" + uuids.size() + "人) ====="
-		).formatted(Formatting.GOLD), false);
-
-		net.minecraft.server.MinecraftServer server = context.getSource().getServer();
-		for (UUID uuid : uuids) {
-			ServerPlayerEntity target = server.getPlayerManager().getPlayer(uuid);
-			String name = target != null ? target.getName().getString() : uuid.toString() + " (离线)";
-			context.getSource().sendFeedback(() -> Text.literal("  - " + name).formatted(Formatting.WHITE), false);
-		}
-
-		return uuids.size();
-	}
-
-	/**
-	 * 清空SP悦灵的治疗白名单
-	 * /ssc_addon allay_whitelist clear <allayPlayer>
-	 */
-	private static int allayWhitelistClear(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-		ServerPlayerEntity allayPlayer = EntityArgumentType.getPlayer(context, "allayPlayer");
-
-		int count = net.onixary.shapeShifterCurseFabric.ssc_addon.ability.AllaySPGroupHeal.clearWhitelist(allayPlayer);
-
-		context.getSource().sendFeedback(() -> Text.literal(
-				"已清空 " + allayPlayer.getName().getString() + " 的白名单 (移除了 " + count + " 名玩家)"
-		).formatted(Formatting.GREEN), true);
-
+		net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking.sendWhitelistSync(player);
 		return 1;
 	}
 

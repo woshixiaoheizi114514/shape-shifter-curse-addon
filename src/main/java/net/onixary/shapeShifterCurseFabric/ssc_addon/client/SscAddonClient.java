@@ -102,6 +102,28 @@ public class SscAddonClient implements ClientModInitializer {
 			client.execute(() -> MancianimaMarkClientState.update(marks));
 		});
 
+		// 注册白名单 GUI S2C 同步包接收器：收到后打开/刷新 WhitelistManageScreen
+		ClientPlayNetworking.registerGlobalReceiver(net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking.PACKET_WHITELIST_GUI_SYNC, (client, handler, buf, responseSender) -> {
+			boolean customMode = buf.readBoolean();
+			int n = buf.readInt();
+			java.util.Set<java.util.UUID> set = new java.util.HashSet<>();
+			for (int i = 0; i < n; i++) set.add(buf.readUuid());
+			int m = buf.readInt();
+			java.util.List<net.onixary.shapeShifterCurseFabric.ssc_addon.client.screen.WhitelistManageScreen.MobEntry> mobs = new java.util.ArrayList<>();
+			for (int i = 0; i < m; i++) {
+				java.util.UUID u = buf.readUuid();
+				String typeId = buf.readString();
+				mobs.add(new net.onixary.shapeShifterCurseFabric.ssc_addon.client.screen.WhitelistManageScreen.MobEntry(u, typeId.isEmpty() ? null : typeId));
+			}
+			client.execute(() -> {
+				if (client.currentScreen instanceof net.onixary.shapeShifterCurseFabric.ssc_addon.client.screen.WhitelistManageScreen s) {
+					s.updateState(set, customMode, mobs);
+				} else {
+					client.setScreen(new net.onixary.shapeShifterCurseFabric.ssc_addon.client.screen.WhitelistManageScreen(set, customMode, mobs));
+				}
+			});
+		});
+
 		ItemTooltipCallback.EVENT.register((stack, context, lines) -> {
 			if (stack.getItem() == SscAddon.CORAL_BALL) {
 				addSplitTooltip(lines, "item.ssc_addon.coral_ball.tooltip");

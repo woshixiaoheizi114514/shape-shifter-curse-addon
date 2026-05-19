@@ -23,8 +23,81 @@ import java.util.UUID;
  */
 public class WhitelistUtils {
 
+    /** 自定义模式标志 tag：存在=自定义模式（按列表判定）；缺失=默认模式（保护所有玩家+宠物，无视列表） */
+    public static final String CUSTOM_MODE_TAG = "ssc_allay_wl_mode:custom";
+
+    /** 生物白名单 tag 前缀。约定由"友军标记"物品写入玩家自身的 command tags：
+     *  形如 {@code ssc_allay_wl_mob:<UUID>}。仅在自定义模式下生效。 */
+    public static final String WHITELIST_MOB_TAG_PREFIX = "ssc_allay_wl_mob:";
+
     private WhitelistUtils() {
         throw new UnsupportedOperationException("Utility class");
+    }
+
+    /** 是否处于自定义模式。默认模式下列表内容仍保留，但不参与判定。 */
+    public static boolean isCustomMode(ServerPlayerEntity player) {
+        return player.getCommandTags().contains(CUSTOM_MODE_TAG);
+    }
+
+    /** 设置模式，返回是否真的发生了变化。 */
+    public static boolean setCustomMode(ServerPlayerEntity player, boolean custom) {
+        if (custom) return player.addCommandTag(CUSTOM_MODE_TAG);
+        return player.getCommandTags().remove(CUSTOM_MODE_TAG);
+    }
+
+    /** 读取玩家身上记录的生物白名单 UUID 列表（按 UUID 字符串排序，保证稳定）。 */
+    public static java.util.List<UUID> getWhitelistedMobUuids(ServerPlayerEntity player) {
+        java.util.List<UUID> result = new java.util.ArrayList<>();
+        for (String tag : player.getCommandTags()) {
+            if (tag.startsWith(WHITELIST_MOB_TAG_PREFIX)) {
+                String body = tag.substring(WHITELIST_MOB_TAG_PREFIX.length());
+                // 支持扩展格式 <UUID>:<typeNs>:<typePath>，取第一段作为 UUID
+                String uuidPart = body.contains(":") ? body.substring(0, body.indexOf(':')) : body;
+                try {
+                    result.add(UUID.fromString(uuidPart));
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+        result.sort(java.util.Comparator.comparing(UUID::toString));
+        return result;
+    }
+
+    /** 读取生物白名单条目附加的 typeId 字符串（"ns:path" 形式），不存在则返回 null。 */
+    public static String getMobTypeId(ServerPlayerEntity player, UUID mobUuid) {
+        String prefix = WHITELIST_MOB_TAG_PREFIX + mobUuid.toString() + ":";
+        for (String tag : player.getCommandTags()) {
+            if (tag.startsWith(prefix)) {
+                return tag.substring(prefix.length()); // ns:path
+            }
+        }
+        return null;
+    }
+
+    /** 移除某个生物白名单条目（不论有无 typeId 后缀），返回是否真的发生了变化。 */
+    public static boolean removeMobFromWhitelist(ServerPlayerEntity player, UUID mobUuid) {
+        String base = WHITELIST_MOB_TAG_PREFIX + mobUuid.toString();
+        String prefix = base + ":";
+        java.util.Set<String> tags = player.getCommandTags();
+        boolean removed = tags.remove(base);
+        // 同时移除带 typeId 后缀的形式
+        java.util.Iterator<String> it = tags.iterator();
+        while (it.hasNext()) {
+            if (it.next().startsWith(prefix)) {
+                it.remove();
+                removed = true;
+            }
+        }
+        return removed;
+    }
+
+    /** 判断某生物 UUID 是否在玩家的生物白名单内（兼容带 typeId 后缀的格式）。 */
+    public static boolean isMobWhitelisted(ServerPlayerEntity player, UUID mobUuid) {
+        String base = WHITELIST_MOB_TAG_PREFIX + mobUuid.toString();
+        String prefix = base + ":";
+        for (String tag : player.getCommandTags()) {
+            if (tag.equals(base) || tag.startsWith(prefix)) return true;
+        }
+        return false;
     }
 
     /**
@@ -38,7 +111,15 @@ public class WhitelistUtils {
         }
 
         Set<String> tags = attacker.getCommandTags();
-        boolean whitelistEmpty = tags.stream().noneMatch(t -> t.startsWith(AllaySPGroupHeal.WHITELIST_TAG_PREFIX));
+        boolean customMode = tags.contains(CUSTOM_MODE_TAG);
+        // 默认模式（未启用自定义）= 列表视为空，永远走"保护所有玩家+宠物"分支
+        boolean whitelistEmpty = !customMode
+                || tags.stream().noneMatch(t -> t.startsWith(AllaySPGroupHeal.WHITELIST_TAG_PREFIX));
+
+        // 自定义模式下额外检查生物白名单（默认模式不生效，因为默认模式不区分名单）
+        if (customMode && isMobWhitelisted(attacker, target.getUuid())) {
+            return true;
+        }
 
         if (whitelistEmpty) {
             if (target instanceof PlayerEntity) return true;
@@ -94,7 +175,13 @@ public class WhitelistUtils {
         }
 
         Set<String> tags = caster.getCommandTags();
-        boolean whitelistEmpty = tags.stream().noneMatch(t -> t.startsWith(AllaySPGroupHeal.WHITELIST_TAG_PREFIX));
+        boolean customMode = tags.contains(CUSTOM_MODE_TAG);
+        boolean whitelistEmpty = !customMode
+                || tags.stream().noneMatch(t -> t.startsWith(AllaySPGroupHeal.WHITELIST_TAG_PREFIX));
+
+        if (customMode && isMobWhitelisted(caster, target.getUuid())) {
+            return true;
+        }
 
         if (whitelistEmpty) {
             if (target instanceof PlayerEntity) return true;

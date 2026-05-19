@@ -158,11 +158,19 @@ public class AllaySPGroupHeal {
 	 * 将目标实体的所有者（如果是宠物）或实体本身（如果是普通生物/玩家）加入白名单
 	 */
 	public static void addToWhitelist(ServerPlayerEntity allayPlayer, LivingEntity target) {
-		if (target instanceof TameableEntity tameable && tameable.getOwnerUuid() != null) {
-			allayPlayer.getCommandTags().add(WHITELIST_TAG_PREFIX + tameable.getOwnerUuid().toString());
-		} else {
-			// 普通生物或玩家，添加自身UUID
+		if (target instanceof net.minecraft.entity.player.PlayerEntity) {
+			// 玩家：只写 player 前缀
 			allayPlayer.getCommandTags().add(WHITELIST_TAG_PREFIX + target.getUuid().toString());
+		} else {
+			// 任何非玩家生物（含宠物）：双写 player 前缀（兼容 isInWhitelist 判定）+ mob 前缀（GUI 用，带物种信息）
+			// 注意：白名单玩家的所有宠物已通过"主人 UUID 在 player 白名单"路径默认受保护，
+			// 这里写宠物自身 UUID 仅在该宠物被显式标记时生效，不影响主人的其它宠物。
+			String uuidStr = target.getUuid().toString();
+			allayPlayer.getCommandTags().add(WHITELIST_TAG_PREFIX + uuidStr);
+			net.minecraft.util.Identifier typeId = net.minecraft.registry.Registries.ENTITY_TYPE.getId(target.getType());
+			String mobTag = net.onixary.shapeShifterCurseFabric.ssc_addon.util.WhitelistUtils.WHITELIST_MOB_TAG_PREFIX
+					+ uuidStr + ":" + typeId.getNamespace() + ":" + typeId.getPath();
+			allayPlayer.getCommandTags().add(mobTag);
 		}
 	}
 
@@ -170,14 +178,10 @@ public class AllaySPGroupHeal {
 	 * 将目标实体的所有者（如果是宠物）或实体本身（如果是普通生物/玩家）从白名单移除
 	 */
 	public static void removeFromWhitelist(ServerPlayerEntity allayPlayer, LivingEntity target) {
-		String tagToRemove;
-		if (target instanceof TameableEntity tameable && tameable.getOwnerUuid() != null) {
-			tagToRemove = WHITELIST_TAG_PREFIX + tameable.getOwnerUuid().toString();
-		} else {
-			tagToRemove = WHITELIST_TAG_PREFIX + target.getUuid().toString();
-		}
-
-		allayPlayer.getCommandTags().remove(tagToRemove);
+		// 始终按 target 自身 UUID 移除（与 addToWhitelist 对称）
+		allayPlayer.getCommandTags().remove(WHITELIST_TAG_PREFIX + target.getUuid().toString());
+		// 同时清除生物白名单上的 mob 前缀 tag（包含剩余的 :ns:path 变体）
+		net.onixary.shapeShifterCurseFabric.ssc_addon.util.WhitelistUtils.removeMobFromWhitelist(allayPlayer, target.getUuid());
 	}
 
 	/**
@@ -205,27 +209,8 @@ public class AllaySPGroupHeal {
 				5, 0.3, 0.3, 0.3, 0.01);
 	}
 
-	// ===== 白名单管理方法（供命令调用） =====
-
-	/**
-	 * 添加玩家到白名单
-	 */
-	public static boolean addToWhitelist(ServerPlayerEntity allayPlayer, ServerPlayerEntity targetPlayer) {
-		String tag = WHITELIST_TAG_PREFIX + targetPlayer.getUuid().toString();
-		if (allayPlayer.getCommandTags().contains(tag)) {
-			return false; // 已在白名单中
-		}
-		allayPlayer.addCommandTag(tag);
-		return true;
-	}
-
-	/**
-	 * 从白名单移除玩家
-	 */
-	public static boolean removeFromWhitelist(ServerPlayerEntity allayPlayer, ServerPlayerEntity targetPlayer) {
-		String tag = WHITELIST_TAG_PREFIX + targetPlayer.getUuid().toString();
-		return allayPlayer.getCommandTags().remove(tag);
-	}
+	// ===== 白名单管理方法（供 GUI / 网络层调用） =====
+	// 旧的 SP-only 玩家重载（add/remove/clear）已随 /ssc_addon whitelist 指令一并删除。
 
 	/**
 	 * 从白名单按UUID移除
@@ -233,21 +218,6 @@ public class AllaySPGroupHeal {
 	public static boolean removeFromWhitelistByUuid(ServerPlayerEntity allayPlayer, UUID targetUuid) {
 		String tag = WHITELIST_TAG_PREFIX + targetUuid.toString();
 		return allayPlayer.getCommandTags().remove(tag);
-	}
-
-	/**
-	 * 清空白名单
-	 */
-	public static int clearWhitelist(ServerPlayerEntity allayPlayer) {
-		int count = 0;
-		var iterator = allayPlayer.getCommandTags().iterator();
-		while (iterator.hasNext()) {
-			if (iterator.next().startsWith(WHITELIST_TAG_PREFIX)) {
-				iterator.remove();
-				count++;
-			}
-		}
-		return count;
 	}
 
 	/**
