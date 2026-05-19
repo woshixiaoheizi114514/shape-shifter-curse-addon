@@ -3,25 +3,26 @@ package net.onixary.shapeShifterCurseFabric.ssc_addon.client.colorpicker;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CheckboxWidget;
 import net.minecraft.client.gui.widget.SliderWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.text.Text;
-import net.onixary.shapeShifterCurseFabric.ssc_addon.client.palette.PalettePreviewRenderer;
-import net.onixary.shapeShifterCurseFabric.ssc_addon.palette.PaletteCodec;
+import org.joml.Quaternionf;
 
 /**
  * 高级调色 GUI：
  *  - 顶部：标题 + 启用复选框
- *  - 第二行：5 个色块切换"当前编辑哪一项颜色"
+ *  - 第二行：5 个色块切换“当前编辑哪一项颜色”
  *  - 三栏并排：左 RGBA 文本框 / 中 R/G/B/A 滑条 / 右 HSV 全色图（共享同一 working color，全联动）
  *  - 中下：3 个 GreyReverse 复选框（独立常驻）
  *  - 下方居中：玩家预览框
  *  - 底部：保存 / 取消（带二次确认）
  *
- * 与 PalettePresetStore 完全隔离。所有同步都走 AdvancedColorBridge。
+ * 所有同步都走 AdvancedColorBridge；配色预设导出入功能已迁出附属包、
+ * 路由到「幻型者诅咒原版」的玩家颜色自定义界面。
  */
 public class AdvancedColorScreen extends Screen {
     private final Screen parent;
@@ -180,10 +181,8 @@ public class AdvancedColorScreen extends Screen {
             addDrawableChild(grChecks[i]);
         }
 
-        // ====== 底部：导出颜色代码 / 取消 / 保存 ======
+        // ====== 底部：取消 / 保存 ======
         int btnY = height - 28;
-        addDrawableChild(ButtonWidget.builder(Text.translatable("text.ssc_addon.adv_color.btn.export_current"),
-                b -> exportCurrentCode()).size(160, 20).position(width / 2 - 230, btnY).build());
         addDrawableChild(ButtonWidget.builder(Text.translatable("text.ssc_addon.adv_color.btn.cancel"),
                 b -> requestCancel()).size(100, 20).position(width / 2 - 60, btnY).build());
         addDrawableChild(ButtonWidget.builder(Text.translatable("text.ssc_addon.adv_color.btn.save"),
@@ -384,14 +383,30 @@ public class AdvancedColorScreen extends Screen {
         ClientPlayerEntity player = MinecraftClient.getInstance().player;
         if (player != null) {
             // 预览已由 applyPreview 把 working 推到 PlayerSkinComponent，这里直接渲染玩家即可
-            PalettePreviewRenderer.render(ctx,
-                    previewX + previewW / 2,
-                    previewY + previewH - 4,
-                    40,
-                    mouseX - (previewX + previewW / 2),
-                    mouseY - (previewY + previewH / 2),
-                    player,
-                    null); // null = 用真实组件状态（即我们已 swap 的工作态）
+            int cx = previewX + previewW / 2;
+            int cy = previewY + previewH - 4;
+            int mx = mouseX - cx;
+            int my = mouseY - (previewY + previewH / 2);
+            float f = (float) Math.atan(mx / 40.0F);
+            float g = (float) Math.atan(my / 40.0F);
+            Quaternionf body = new Quaternionf().rotateZ((float) Math.PI);
+            Quaternionf head = new Quaternionf().rotateX(g * 20.0F * 0.017453292F);
+            body.mul(head);
+            float bh = player.bodyYaw, yaw = player.getYaw(), pitch = player.getPitch();
+            float phy = player.prevHeadYaw, hy = player.headYaw, pby = player.prevBodyYaw;
+            player.bodyYaw = 180.0F + f * 20.0F;
+            player.prevBodyYaw = player.bodyYaw;
+            player.setYaw(180.0F + f * 40.0F);
+            player.setPitch(-g * 20.0F);
+            player.headYaw = player.getYaw();
+            player.prevHeadYaw = player.getYaw();
+            try {
+                InventoryScreen.drawEntity(ctx, cx, cy, 40, body, head, player);
+            } finally {
+                player.bodyYaw = bh; player.prevBodyYaw = pby;
+                player.setYaw(yaw); player.setPitch(pitch);
+                player.prevHeadYaw = phy; player.headYaw = hy;
+            }
         }
 
         // 状态行：底部按钮上方居中；设置后 5s 内全亮，然后 2s 渐隐至不可见
@@ -484,32 +499,6 @@ public class AdvancedColorScreen extends Screen {
         AdvancedColorBridge.commitSave(working);
         // 提交后 PlayerSkinComponent 会被服务端同步覆写，无需手动 restoreFromBackup
         MinecraftClient.getInstance().setScreen(parent);
-    }
-
-    /** 复制当前工作态颜色代码到剪贴板（与 PalettePresetsScreen.exportCurrent 同一格式）。 */
-    private void exportCurrentCode() {
-        try {
-            String code = PaletteCodec.encode(
-                    argbToRgba(working.colorsARGB[AdvancedColorBridge.IDX_PRIMARY]),
-                    argbToRgba(working.colorsARGB[AdvancedColorBridge.IDX_ACCENT1]),
-                    argbToRgba(working.colorsARGB[AdvancedColorBridge.IDX_ACCENT2]),
-                    argbToRgba(working.colorsARGB[AdvancedColorBridge.IDX_EYE_A]),
-                    argbToRgba(working.colorsARGB[AdvancedColorBridge.IDX_EYE_B]),
-                    working.greyReverse[AdvancedColorBridge.GR_IDX_PRIMARY],
-                    working.greyReverse[AdvancedColorBridge.GR_IDX_ACCENT1],
-                    working.greyReverse[AdvancedColorBridge.GR_IDX_ACCENT2]);
-            MinecraftClient.getInstance().keyboard.setClipboard(code);
-            this.setStatus(Text.translatable("text.ssc_addon.adv_color.status.exported"));
-        } catch (RuntimeException e) {
-            this.setStatus(Text.translatable("text.ssc_addon.adv_color.status.export_failed"));
-        }
-    }
-
-    /** ARGB int → RGBA int（PaletteCodec 使用 RGBA 格式）。 */
-    private static int argbToRgba(int argb) {
-        int a = (argb >>> 24) & 0xFF;
-        int rgb = argb & 0x00FFFFFF;
-        return (rgb << 8) | a;
     }
 
     /** 5 个色槽对应的本地化名称。 */

@@ -6,7 +6,6 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
-import net.onixary.shapeShifterCurseFabric.ssc_addon.client.palette.PalettePresetsScreen;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.config.SSCAddonClientConfig;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.config.SSCAddonServerConfig;
 
@@ -32,7 +31,7 @@ public class SSCAddonConfigMenuScreen extends Screen {
 		final int btnW = 240;
 		final int btnH = 20;
 		final int gap = 10;
-		final int totalRows = 4; // 客户端 + 服务端 + 配色预设 + 关闭
+		final int totalRows = 3; // 客户端 + 服务端 + 关闭（配色预设入口已迁至 原版 玩家颜色自定义 左上角）
 		final int xPos = (width - btnW) / 2;
 		int yPos = (height - btnH * totalRows - gap * (totalRows - 1)) / 2;
 
@@ -46,12 +45,6 @@ public class SSCAddonConfigMenuScreen extends Screen {
 		addBtn(xPos, yPos, btnW, btnH,
 				Text.translatable("text.autoconfig.ssc_addon_server.title"),
 				() -> AutoConfig.getConfigScreen(SSCAddonServerConfig.class, this).get());
-		yPos += btnH + gap;
-
-		// 配色预设按钮（独立 Screen，因为 ClothConfig 无法塞动态行）
-		addBtn(xPos, yPos, btnW, btnH,
-				Text.translatable("text.ssc_addon.palette.title"),
-				() -> new PalettePresetsScreen(this));
 		yPos += btnH + gap;
 
 		// 关闭按钮

@@ -34,7 +34,6 @@ import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.AllaySPGroupHeal;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.entity.FrostBallEntity;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.PowerUtils;
-import net.onixary.shapeShifterCurseFabric.ssc_addon.palette.PaletteCodec;
 import net.onixary.shapeShifterCurseFabric.player_form.skin.PlayerSkinComponent;
 import net.onixary.shapeShifterCurseFabric.player_form.skin.RegPlayerSkinComponent;
 import net.onixary.shapeShifterCurseFabric.util.FormTextureUtils;
@@ -244,19 +243,6 @@ public class SscAddonCommands {
 								.executes(ctx -> mancianimaAssaultStatus(ctx, ctx.getSource().getPlayer()))
 								.then(CommandManager.argument("player", EntityArgumentType.player())
 										.executes(ctx -> mancianimaAssaultStatus(ctx, EntityArgumentType.getPlayer(ctx, "player")))
-								)
-						)
-				)
-				// ============== /ssc_addon palette ==============
-				// 形态配色「分享码」：导出当前配色为一串可复制文本；通过 apply 指令一键应用
-				// 不依赖文件 IO / ClothConfig，绕开主包配色 UI 无法加按钮的限制
-				.then(CommandManager.literal("palette")
-						.then(CommandManager.literal("export")
-								.executes(ctx -> paletteExport(ctx, ctx.getSource().getPlayer()))
-						)
-						.then(CommandManager.literal("apply")
-								.then(CommandManager.argument("code", StringArgumentType.greedyString())
-										.executes(ctx -> paletteApply(ctx, ctx.getSource().getPlayer(), StringArgumentType.getString(ctx, "code")))
 								)
 						)
 				)
@@ -980,58 +966,5 @@ default -> {
 		player.getWorld().playSound(null, player.getX(), player.getY(), player.getZ(),
 			SoundEvents.ENTITY_SNOWBALL_THROW, SoundCategory.PLAYERS, 0.5f, 1.2f);
 		return true;
-	}
-
-	// ============== /ssc_addon palette ==============
-	// 读取当前玩家的 PlayerSkinComponent，把 8 个配色字段编成分享码，通过聊天发送（可点击复制）
-	// 设计要点：
-	//   1. 不设 .requires(permissionLevel)，所有玩家在不开作弊的存档中也能使用
-	//   2. 只对执行者本人生效（getPlayer()），不允许指定别的目标，避免被恶意改他人外观
-	//   3. 所有反馈消息使用 Text.translatable() 走 lang key，支持中英双语
-	private static int paletteExport(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity player) {
-		if (player == null) { ctx.getSource().sendError(Text.translatable("ssc_addon.palette.only_self")); return 0; }
-		PlayerSkinComponent skin = RegPlayerSkinComponent.SKIN_SETTINGS.get(player);
-		FormTextureUtils.ColorSetting cs = skin.getFormColor();
-		// 主包内部存 ABGR，导出时要转回 RGBA 让 apply 那边解析后能直接喂给 setFormColor(int RGBA, ...)
-		int primary = FormTextureUtils.ABGR2RGBA(cs.getPrimaryColor());
-		int accent1 = FormTextureUtils.ABGR2RGBA(cs.getAccentColor1());
-		int accent2 = FormTextureUtils.ABGR2RGBA(cs.getAccentColor2());
-		int eyeA = FormTextureUtils.ABGR2RGBA(cs.getEyeColorA());
-		int eyeB = FormTextureUtils.ABGR2RGBA(cs.getEyeColorB());
-		String code = PaletteCodec.encode(primary, accent1, accent2, eyeA, eyeB,
-				cs.getPrimaryGreyReverse(), cs.getAccent1GreyReverse(), cs.getAccent2GreyReverse());
-
-		// 让代码可点击复制到剪贴板
-		MutableText codeText = Text.literal(code).setStyle(Style.EMPTY
-				.withColor(Formatting.AQUA)
-				.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, code))
-				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("ssc_addon.palette.export.copy_hover"))));
-		ctx.getSource().sendFeedback(() -> Text.translatable("ssc_addon.palette.export.header").append(codeText), false);
-		ctx.getSource().sendFeedback(() -> Text.translatable("ssc_addon.palette.export.hint"), false);
-		return 1;
-	}
-
-	// 解析分享码 → 调用 setFormColor(int*5 RGBA, bool*3)；AutoSyncedComponent 会自动同步到所有客户端
-	// 只允许作用于执行者本人，绝不接受 target 参数 — 防止"给别人乱改外观"的滥用
-	private static int paletteApply(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity player, String rawCode) {
-		if (player == null) { ctx.getSource().sendError(Text.translatable("ssc_addon.palette.only_self")); return 0; }
-		PaletteCodec.PaletteData data;
-		try {
-			data = PaletteCodec.decode(rawCode);
-		} catch (PaletteCodec.DecodeException e) {
-			ctx.getSource().sendError(Text.translatable("ssc_addon.palette.apply.failed",
-					Text.translatable(e.langKey, e.args)));
-			return 0;
-		}
-		PlayerSkinComponent skin = RegPlayerSkinComponent.SKIN_SETTINGS.get(player);
-		skin.setFormColor(data.primaryRGBA(), data.accent1RGBA(), data.accent2RGBA(),
-				data.eyeARGBA(), data.eyeBRGBA(),
-				data.primaryGreyReverse(), data.accent1GreyReverse(), data.accent2GreyReverse());
-		// 应用后立刻开启 enableFormColor，避免玩家纳闷"为什么应用了没变化"
-		skin.setEnableFormColor(true);
-		// 触发 AutoSyncedComponent 主动同步，确保其它客户端立即看到新配色
-		RegPlayerSkinComponent.SKIN_SETTINGS.sync(player);
-		ctx.getSource().sendFeedback(() -> Text.translatable("ssc_addon.palette.apply.success"), false);
-		return 1;
 	}
 }

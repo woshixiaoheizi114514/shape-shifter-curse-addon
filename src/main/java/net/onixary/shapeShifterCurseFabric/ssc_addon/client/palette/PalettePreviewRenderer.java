@@ -11,11 +11,14 @@ import net.onixary.shapeShifterCurseFabric.util.FormTextureUtils;
 import org.joml.Quaternionf;
 
 /**
- * 在自定义 Screen 内渲染玩家当前形态的小预览。
+ * 在附属自定义 Screen 内渲染玩家当前形态的小预览（附属内部副本）。
  *
  * 实现：渲染前临时把玩家 PlayerSkinComponent.formColor 换成预览配色，
  * InventoryScreen.drawEntity 后立刻还原，避免污染真实组件状态。
- * 全程同步主线程调用，主世界下一帧仍使用真实配色。
+ *
+ * 备注：原版同名工具位于 net.onixary.shapeShifterCurseFabric.client.palette，
+ * 服务于原版「玩家颜色自定义」入口处的配色预设界面；本副本仅供附属包内的
+ * AdvancedColorScreen 等界面使用，保持附属包可独立编译。
  */
 public final class PalettePreviewRenderer {
     private PalettePreviewRenderer() {}

@@ -3,7 +3,7 @@ package net.onixary.shapeShifterCurseFabric.ssc_addon.palette;
 /**
  * 形态配色「分享码」编解码工具。
  *
- * 设计目的：把 SSC 主包 PlayerSkinComponent 的 8 个配色字段
+ * 设计目的：把 SSC PlayerSkinComponent 的 8 个配色字段
  * （5 个 RGBA 颜色 + 3 个 greyReverse 布尔）打包成一串可复制粘贴的 ASCII 文本，
  * 让玩家通过指令一键导入/分享配色，绕开 ClothConfig 无法添加按钮的限制。
  *
@@ -12,6 +12,11 @@ package net.onixary.shapeShifterCurseFabric.ssc_addon.palette;
  *   - 末尾 Y 为 1 位 hex（0-7），3 个位分别对应 primary/accent1/accent2 的 greyReverse
  *
  * 总长固定 56 字符，便于一行复制；前缀 SSCA- 防止误粘贴其它字符串。
+ *
+ * 备注：附属包内保留此本地副本，仅供附属包内部（AdvancedColorScreen / SscAddonCommands）
+ * 编译时引用使用；面向玩家的配色预设 UI 主功能位于「幻型者诅咒原版」的
+ * net.onixary.shapeShifterCurseFabric.palette.PaletteCodec 处，格式与本类完全一致，
+ * 因此两侧生成/解析的分享码可互通。
  */
 public final class PaletteCodec {
     private PaletteCodec() {}
@@ -30,9 +35,7 @@ public final class PaletteCodec {
         }
     }
 
-    /**
-     * 编码 8 个字段为字符串。颜色参数为 RGBA 格式（高字节为 R）。
-     */
+    /** 编码 8 个字段为字符串。颜色参数为 RGBA 格式（高字节为 R）。 */
     public static String encode(int primaryRGBA, int accent1RGBA, int accent2RGBA, int eyeARGBA, int eyeBRGBA,
                                 boolean primaryGreyReverse, boolean accent1GreyReverse, boolean accent2GreyReverse) {
         int flags = (primaryGreyReverse ? 1 : 0) | (accent1GreyReverse ? 2 : 0) | (accent2GreyReverse ? 4 : 0);
@@ -45,9 +48,7 @@ public final class PaletteCodec {
                 + Integer.toHexString(flags).toUpperCase();
     }
 
-    /**
-     * 解码字符串到数据对象。失败抛 DecodeException（含 lang key 与参数）。
-     */
+    /** 解码字符串到数据对象。失败抛 DecodeException（含 lang key 与参数）。 */
     public static PaletteData decode(String raw) {
         if (raw == null || raw.trim().isEmpty()) throw new DecodeException("ssc_addon.palette.error.empty");
         String code = raw.trim().toUpperCase();
