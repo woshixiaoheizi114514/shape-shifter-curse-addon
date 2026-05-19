@@ -1,4 +1,4 @@
-﻿{
+{
   "key.categories.ssc_addon": "Shape Shifter Curse Addon",
   "ssc_addon.warning.frost_pawglove_incompatible": "Incompatible mana structure, Frost Pawglove cannot function in this form.",
   "item.ssc_addon.frost_protection_ring": "Frost Protection Ring",
@@ -355,25 +355,5 @@
   "item.ssc_addon.binding_anklet.tooltip_1": "Mancianima Exclusive · Anklet Slot",
   "item.ssc_addon.binding_anklet.tooltip_2": "Pillager-faction mobs within 16 blocks",
   "item.ssc_addon.binding_anklet.tooltip_3": "deal +20% damage. The wearer themselves does not receive this bonus.",
-  "item.ssc_addon.binding_anklet.tooltip_4": "Only obtainable from Pillager Outpost loot chests.",
-  "text.ssc_addon.config.close": "Close",
-  "key.ssc_addon.open_advanced_color": "Open Advanced Color Editor",
-  "text.ssc_addon.adv_color.title": "SSCA — Advanced Color Editor",
-  "text.ssc_addon.adv_color.enable": "Enable Custom Colors",
-  "text.ssc_addon.adv_color.col.rgba": "RGBA Values",
-  "text.ssc_addon.adv_color.col.slider": "Sliders",
-  "text.ssc_addon.adv_color.col.wheel": "Color Wheel",
-  "text.ssc_addon.adv_color.grey_reverse.primary": "Primary: Reverse Grey",
-  "text.ssc_addon.adv_color.grey_reverse.accent1": "Accent 1: Reverse Grey",
-  "text.ssc_addon.adv_color.grey_reverse.accent2": "Accent 2: Reverse Grey",
-  "text.ssc_addon.adv_color.btn.save": "Save & Sync",
-  "text.ssc_addon.adv_color.btn.cancel": "Cancel",
-  "text.ssc_addon.adv_color.confirm.cancel_title": "Discard unsaved changes?",
-  "text.ssc_addon.adv_color.confirm.cancel_msg": "Your color preview has unsaved changes. Closing will revert to the colors before you opened this screen.",
-  "text.ssc_addon.adv_color.current_editing": "Editing: %s",
-  "text.ssc_addon.adv_color.slot.primary": "Primary",
-  "text.ssc_addon.adv_color.slot.accent1": "Accent 1",
-  "text.ssc_addon.adv_color.slot.accent2": "Accent 2",
-  "text.ssc_addon.adv_color.slot.eye_a": "Eye A",
-  "text.ssc_addon.adv_color.slot.eye_b": "Eye B"
+  "item.ssc_addon.binding_anklet.tooltip_4": "Only obtainable from Pillager Outpost loot chests."
 }
