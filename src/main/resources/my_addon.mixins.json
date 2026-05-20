@@ -43,6 +43,7 @@
     "render.OriginFurMixin",
     "render.OriginFurModelMixin",
     "render.OverlayRenderMixin",
+    "render.FormColorSelectMenuMixin",
     "player.SscPlayerEntityRendererMixin",
     "input.StunnedCameraMixin",
     "input.StunnedInputMixin",
