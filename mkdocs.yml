@@ -17,11 +17,15 @@ nav:
 - SP形态:
   - 形态概述: sp_forms/overview.md
   - SP使魔（灵界之主）: sp_forms/sp_familiar_fox.md
+  - 红 · 堕落使魔（灵界之主分支）: sp_forms/sp_familiar_fox_red.md
+  - 契灵（禁忌兵器）: sp_forms/sp_familiar_fox_mancianima.md
   - SP美西螈（深渊霸主）: sp_forms/sp_axolotl.md
   - SP野猫（暗夜猎手）: sp_forms/sp_wild_cat.md
   - SP雪狐（霜寒之灵）: sp_forms/sp_snow_fox.md
   - SP悦灵（水晶之音）: sp_forms/sp_allay.md
   - SP堕落悦灵（堕落之灵）: sp_forms/sp_fallen_allay.md
+  - SP阿努比斯（冥裁者）: sp_forms/sp_anubis_wolf.md
+  - 金沙岚: sp_forms/sp_golden_sandstorm.md
 - 物品:
   - 进化用品: items/evolution_items.md
   - 材料与素材: items/materials.md
