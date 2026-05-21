@@ -25,7 +25,7 @@ nav:
   - SP悦灵（水晶之音）: sp_forms/sp_allay.md
   - SP堕落悦灵（堕落之灵）: sp_forms/sp_fallen_allay.md
   - SP阿努比斯（冥裁者）: sp_forms/sp_anubis_wolf.md
-  - 金沙岚: sp_forms/sp_golden_sandstorm.md
+  - 金沙岚 (尘卷风): sp_forms/sp_golden_sandstorm.md
 - 物品:
   - 进化用品: items/evolution_items.md
   - 材料与素材: items/materials.md
@@ -44,7 +44,6 @@ nav:
   - 使魔研究记录: lore/familiar_research.md
   - 月髓环诗篇: lore/moon_ring_poems.md
   - 千年纪 · 人魔大战: lore/millennium_war.md
-
 plugins:
   - search
 
