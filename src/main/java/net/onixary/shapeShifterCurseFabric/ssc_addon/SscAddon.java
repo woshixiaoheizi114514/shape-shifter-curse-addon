@@ -689,6 +689,10 @@ public class SscAddon implements ModInitializer {
 			UndeadNeutralState.clearPlayer(uuid);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.action.SscAddonActions.clearPlayer(uuid);
 			PLAYER_LANGUAGES.remove(uuid);
+			// 契灵：清理袭击 bossBar + raid 状态，防止 bossBar 残留与 Map 泄漏
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive.onPlayerDisconnect(uuid);
+			// 白名单 GUI 限频表：移除退出玩家的时间戳，防止僵尸 UUID 积累
+			net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking.onPlayerDisconnect(uuid);
 			System.out.println("[SSC_ADDON] DISCONNECT cleanup completed");
 		});
 	}

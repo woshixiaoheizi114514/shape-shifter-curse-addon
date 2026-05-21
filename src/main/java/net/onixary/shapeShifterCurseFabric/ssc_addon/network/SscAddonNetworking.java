@@ -53,6 +53,11 @@ public class SscAddonNetworking {
 		return last != null && (now - last) < WHITELIST_PACKET_MIN_INTERVAL_MS;
 	}
 
+	/** 玩家退服时调用：清理限频时间戳，防止僵尸 UUID 长期积累。 */
+	public static void onPlayerDisconnect(UUID uuid) {
+		LAST_WHITELIST_PACKET_TICK.remove(uuid);
+	}
+
 	public static void registerServerReceivers() {
 		ServerPlayNetworking.registerGlobalReceiver(PACKET_KEY_PRESS, (server, player, handler, buf, responseSender) -> {
 			int keyId = buf.readInt();

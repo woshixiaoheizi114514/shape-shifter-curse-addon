@@ -87,6 +87,13 @@ public class PalettePresetsScreen extends Screen {
         addDrawableChild(ButtonWidget.builder(Text.translatable("text.ssc_addon.palette.btn.export_current"),
                 btn -> exportCurrent()).size(160, 20).position(width - 165, 22).build());
 
+        // 「打开配色文件夹」：放在左侧预览框「当前颜色」标签下方，居中于预览框
+        int openFolderBtnW = 100;
+        int openFolderBtnX = PREVIEW_X + (PREVIEW_W - openFolderBtnW) / 2;
+        int openFolderBtnY = PREVIEW_LABEL_Y + 12;
+        addDrawableChild(ButtonWidget.builder(Text.translatable("text.ssc_addon.palette.btn.open_folder"),
+                btn -> openConfigFolder()).size(openFolderBtnW, 20).position(openFolderBtnX, openFolderBtnY).build());
+
         // 计算滚动列表视口
         final int startX = PREVIEW_X + PREVIEW_W + 14;
         this.viewportLeft   = startX;
@@ -137,13 +144,33 @@ public class PalettePresetsScreen extends Screen {
             slotRows.add(row);
         }
 
-        // 底部：关闭 + 批量导出全部
+        // ====== 底部：→ 颜色编辑器 / 关闭 / 全部导出（3 按钮居中一行对齐） ======
+        final int botBtnH = 20;
+        final int botBtnW = 120;
+        final int botGap  = 10;
         int closeY = viewportY + viewportH + 28;
-        int closeX = (width - 120) / 2;
+        int botTotalW = botBtnW * 3 + botGap * 2;
+        int botStartX = (width - botTotalW) / 2;
+
+        // 「→ 颜色编辑器」：如果是从 AdvancedColorScreen 跳进来的（parent 是它），直接复用原实例，
+        // 保留 working 状态不丢。否则 fallback 新建一个。
+        addDrawableChild(ButtonWidget.builder(Text.translatable("text.ssc_addon.palette.btn.to_editor"),
+            b -> {
+                if (this.parent instanceof net.onixary.shapeShifterCurseFabric.ssc_addon.client.colorpicker.AdvancedColorScreen) {
+                    MinecraftClient.getInstance().setScreen(this.parent);
+                } else {
+                    MinecraftClient.getInstance().setScreen(
+                            new net.onixary.shapeShifterCurseFabric.ssc_addon.client.colorpicker.AdvancedColorScreen(this.parent));
+                }
+            }).size(botBtnW, botBtnH).position(botStartX, closeY).build());
+
+        // 关闭
         addDrawableChild(ButtonWidget.builder(Text.translatable("text.ssc_addon.config.close"),
-            b -> close()).size(120, 20).position(closeX, closeY).build());
+            b -> close()).size(botBtnW, botBtnH).position(botStartX + botBtnW + botGap, closeY).build());
+
+        // 全部导出
         addDrawableChild(ButtonWidget.builder(Text.translatable("text.ssc_addon.palette.btn.export_all"),
-            btn -> exportAllToFile()).size(BTN_W * 2 + GAP, 20).position(closeX + 120 + GAP, closeY).build());
+            btn -> exportAllToFile()).size(botBtnW, botBtnH).position(botStartX + (botBtnW + botGap) * 2, closeY).build());
 
         updateRowPositions();
     }
@@ -211,6 +238,10 @@ public class PalettePresetsScreen extends Screen {
         try { data = PaletteCodec.decode(slot.code); }
         catch (PaletteCodec.DecodeException e) { setStatus("text.ssc_addon.palette.status.invalid_code"); return; }
         PaletteConfigSync.apply(data);
+        // 同步更新上层 AdvancedColorScreen 的 working，避免本屏 tick 推 owner.working 时反扣回旧色
+        if (this.parent instanceof net.onixary.shapeShifterCurseFabric.ssc_addon.client.colorpicker.AdvancedColorScreen owner) {
+            owner.applyPaletteData(data);
+        }
         p.networkHandler.sendChatCommand("ssc_addon palette apply " + slot.code);
         setStatus("text.ssc_addon.palette.status.apply_sent", idx + 1);
     }
@@ -251,6 +282,14 @@ public class PalettePresetsScreen extends Screen {
     }
 
     private void setStatus(String key, Object... args) { this.statusLine = Text.translatable(key, args); }
+
+    /** 在系统文件管理器打开 config/ssca/（配色预设存储目录）。 */
+    private void openConfigFolder() {
+        java.nio.file.Path dir = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("ssca");
+        try { java.nio.file.Files.createDirectories(dir); } catch (java.io.IOException ignored) {}
+        net.minecraft.util.Util.getOperatingSystem().open(dir.toFile());
+        setStatus("text.ssc_addon.palette.status.folder_opened");
+    }
 
     private Text getSyncBtnText() {
         PalettePresetStore store = PalettePresetStore.get();
@@ -295,6 +334,19 @@ public class PalettePresetsScreen extends Screen {
 
     @Override
     public void close() { MinecraftClient.getInstance().setScreen(parent); }
+
+    // 预设屏驻留期间，如果是从 AdvancedColorScreen 跳进来的，持续把 owner.working 推回预览，
+    // 避免 SSC 主包 tick 用服务端旧 ColorComponent 覆盖玩家颜色。
+    @Override
+    public void tick() {
+        super.tick();
+        if (this.parent instanceof net.onixary.shapeShifterCurseFabric.ssc_addon.client.colorpicker.AdvancedColorScreen owner) {
+            var working = owner.getWorkingForPreview();
+            if (working != null) {
+                net.onixary.shapeShifterCurseFabric.ssc_addon.client.colorpicker.AdvancedColorBridge.applyPreview(working);
+            }
+        }
+    }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {

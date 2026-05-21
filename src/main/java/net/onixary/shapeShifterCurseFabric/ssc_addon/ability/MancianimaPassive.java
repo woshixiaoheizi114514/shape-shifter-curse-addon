@@ -691,4 +691,19 @@ public final class MancianimaPassive {
 		// raider 组在 server 重启时丢弃跟踪（实体本身已带 Persistent 持久化），避免悬空状态
 		RAIDER_GROUPS.clear();
 	}
+
+	/**
+	 * 单个玩家退服时清理与其绑定的内存状态，避免长期累积。
+	 * - 撤销 raid bossBar 的玩家订阅并清空 ASSAULTS 中该玩家的条目；
+	 * - 立即丢弃 RAIDER_GROUPS 中该玩家的 group 跟踪（raider 实体本身已持久化，世界会继续保留）。
+	 * 注意：本方法仅清内存索引，不会移除世界中已生成的 raider 实体。
+	 */
+	public static void onPlayerDisconnect(UUID uuid) {
+		AssaultData data = ASSAULTS.remove(uuid);
+		if (data != null && data.bossBar != null) {
+			data.bossBar.clearPlayers();
+			data.bossBar.setVisible(false);
+		}
+		RAIDER_GROUPS.remove(uuid);
+	}
 }

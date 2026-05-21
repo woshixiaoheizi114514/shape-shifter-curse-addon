@@ -26,6 +26,14 @@ public class SSCAddonClientConfig implements ConfigData {
 	@ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
 	public MancianimaTeleportMode mancianimaTeleportMode = MancianimaTeleportMode.RAYCAST;
 
+	/**
+	 * 是否启用 SSCA 自己的颜色编辑器与 20 槽预设管理。
+	 * 开启后会在打开原版 SSC 颜色编辑菜单时自动替换为 SSCA 的 AdvancedColorScreen。
+	 * 关闭时所有 SSCA 颜色拦截/UI 入口均停用，使用原版 SSC 颜色编辑功能；已保存数据保留。
+	 */
+	@ConfigEntry.Gui.Tooltip
+	public boolean enableColorEditor = false;
+
 	public enum MancianimaTeleportMode {
 		RAYCAST,
 		PLATFORM

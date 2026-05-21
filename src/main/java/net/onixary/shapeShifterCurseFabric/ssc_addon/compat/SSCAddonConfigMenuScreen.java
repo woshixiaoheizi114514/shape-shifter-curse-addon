@@ -31,7 +31,9 @@ public class SSCAddonConfigMenuScreen extends Screen {
 		final int btnW = 240;
 		final int btnH = 20;
 		final int gap = 10;
-		final int totalRows = 3; // 客户端 + 服务端 + 关闭（配色预设入口已迁至 原版 玩家颜色自定义 左上角）
+		// 颜色编辑器入口仅在开关 ON 时显示；预设界面通过编辑器内部跳转按钮访问
+		final boolean showColorBtn = AutoConfig.getConfigHolder(SSCAddonClientConfig.class).getConfig().enableColorEditor;
+		final int totalRows = showColorBtn ? 4 : 3;
 		final int xPos = (width - btnW) / 2;
 		int yPos = (height - btnH * totalRows - gap * (totalRows - 1)) / 2;
 
@@ -46,6 +48,14 @@ public class SSCAddonConfigMenuScreen extends Screen {
 				Text.translatable("text.autoconfig.ssc_addon_server.title"),
 				() -> AutoConfig.getConfigScreen(SSCAddonServerConfig.class, this).get());
 		yPos += btnH + gap;
+
+		// 颜色编辑器（仅在 enableColorEditor=true 时显示；进入后可通过界面内按钮跳转到预设管理）
+		if (showColorBtn) {
+			addBtn(xPos, yPos, btnW, btnH,
+					Text.translatable("text.ssc_addon.config.open_color_editor"),
+					() -> new net.onixary.shapeShifterCurseFabric.ssc_addon.client.colorpicker.AdvancedColorScreen(this));
+			yPos += btnH + gap;
+		}
 
 		// 关闭按钮
 		addDrawableChild(ButtonWidget.builder(

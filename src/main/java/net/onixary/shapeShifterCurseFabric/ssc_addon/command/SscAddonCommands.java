@@ -33,6 +33,14 @@ import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.AllaySPGroupHeal;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.entity.FrostBallEntity;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.PowerUtils;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.palette.PaletteCodec;
+import net.onixary.shapeShifterCurseFabric.player_form.skin.PlayerSkinComponent;
+import net.onixary.shapeShifterCurseFabric.player_form.skin.RegPlayerSkinComponent;
+import net.onixary.shapeShifterCurseFabric.util.FormTextureUtils;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.HoverEvent;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Style;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -215,7 +223,66 @@ public class SscAddonCommands {
 								)
 						)
 				)
+				// ============== /ssc_addon palette ==============
+				// 形态配色「分享码」：导出当前配色为分享文本；apply 一键应用
+				// 不加 .requires(permissionLevel) — 关闭作弊的存档/服务器内普通玩家也能使用；只对执行者本人生效（规则 #49）
+				.then(CommandManager.literal("palette")
+						.then(CommandManager.literal("export")
+								.executes(ctx -> paletteExport(ctx, ctx.getSource().getPlayer()))
+						)
+						.then(CommandManager.literal("apply")
+								.then(CommandManager.argument("code", StringArgumentType.greedyString())
+										.executes(ctx -> paletteApply(ctx, ctx.getSource().getPlayer(), StringArgumentType.getString(ctx, "code")))
+								)
+						)
+				)
 		);
+	}
+
+	// ============== /ssc_addon palette ==============
+	// 仅对执行者本人生效，禁止 target 参数；反馈消息全部走 lang key
+	private static int paletteExport(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity player) {
+		if (player == null) { ctx.getSource().sendError(Text.translatable("ssc_addon.palette.only_self")); return 0; }
+		PlayerSkinComponent skin = RegPlayerSkinComponent.SKIN_SETTINGS.get(player);
+		FormTextureUtils.ColorSetting cs = skin.getFormColor();
+		// 主包内部存 ABGR，导出转回 RGBA 让 apply 那边解析后能直接喂给 setFormColor(int RGBA, ...)
+		int primary = FormTextureUtils.ABGR2RGBA(cs.getPrimaryColor());
+		int accent1 = FormTextureUtils.ABGR2RGBA(cs.getAccentColor1());
+		int accent2 = FormTextureUtils.ABGR2RGBA(cs.getAccentColor2());
+		int eyeA = FormTextureUtils.ABGR2RGBA(cs.getEyeColorA());
+		int eyeB = FormTextureUtils.ABGR2RGBA(cs.getEyeColorB());
+		String code = PaletteCodec.encode(primary, accent1, accent2, eyeA, eyeB,
+				cs.getPrimaryGreyReverse(), cs.getAccent1GreyReverse(), cs.getAccent2GreyReverse());
+
+		MutableText codeText = Text.literal(code).setStyle(Style.EMPTY
+				.withColor(Formatting.AQUA)
+				.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, code))
+				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("ssc_addon.palette.export.copy_hover"))));
+		ctx.getSource().sendFeedback(() -> Text.translatable("ssc_addon.palette.export.header").append(codeText), false);
+		ctx.getSource().sendFeedback(() -> Text.translatable("ssc_addon.palette.export.hint"), false);
+		return 1;
+	}
+
+	private static int paletteApply(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity player, String rawCode) {
+		if (player == null) { ctx.getSource().sendError(Text.translatable("ssc_addon.palette.only_self")); return 0; }
+		PaletteCodec.PaletteData data;
+		try {
+			data = PaletteCodec.decode(rawCode);
+		} catch (PaletteCodec.DecodeException e) {
+			ctx.getSource().sendError(Text.translatable("ssc_addon.palette.apply.failed",
+					Text.translatable(e.langKey, e.args)));
+			return 0;
+		}
+		PlayerSkinComponent skin = RegPlayerSkinComponent.SKIN_SETTINGS.get(player);
+		skin.setFormColor(data.primaryRGBA(), data.accent1RGBA(), data.accent2RGBA(),
+				data.eyeARGBA(), data.eyeBRGBA(),
+				data.primaryGreyReverse(), data.accent1GreyReverse(), data.accent2GreyReverse());
+		// 应用后自动开启 enableFormColor，避免玩家纳闷"为什么应用了没变化"
+		skin.setEnableFormColor(true);
+		// 触发 AutoSyncedComponent 同步，让其它客户端立即看到新配色
+		RegPlayerSkinComponent.SKIN_SETTINGS.sync(player);
+		ctx.getSource().sendFeedback(() -> Text.translatable("ssc_addon.palette.apply.success"), false);
+		return 1;
 	}
 
 	// ============== /ssc_addon mancianima_assault ==============

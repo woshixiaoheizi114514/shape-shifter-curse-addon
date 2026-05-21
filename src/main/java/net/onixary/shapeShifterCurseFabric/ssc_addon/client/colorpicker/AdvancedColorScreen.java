@@ -181,12 +181,24 @@ public class AdvancedColorScreen extends Screen {
             addDrawableChild(grChecks[i]);
         }
 
-        // ====== 底部：取消 / 保存 ======
+        // ====== 底部：→预设 / 取消 / 保存（3 个按钮居中一行对齐）======
+        final int botBtnH = 20;
+        final int botBtnW = 100;
+        final int botGap  = 10;
         int btnY = height - 28;
+        int botTotalW = botBtnW * 3 + botGap * 2;
+        int botStartX = (width - botTotalW) / 2;
+        // → 预设管理：传 this 而不是 this.parent，让预设屏关闭后能返回本屏实例，保留 working 状态
+        addDrawableChild(ButtonWidget.builder(Text.translatable("text.ssc_addon.adv_color.btn.to_presets"),
+                b -> MinecraftClient.getInstance().setScreen(
+                        new net.onixary.shapeShifterCurseFabric.ssc_addon.client.palette.PalettePresetsScreen(this)
+                )).size(botBtnW, botBtnH).position(botStartX, btnY).build());
+        // 取消
         addDrawableChild(ButtonWidget.builder(Text.translatable("text.ssc_addon.adv_color.btn.cancel"),
-                b -> requestCancel()).size(100, 20).position(width / 2 - 60, btnY).build());
+                b -> requestCancel()).size(botBtnW, botBtnH).position(botStartX + botBtnW + botGap, btnY).build());
+        // 保存
         addDrawableChild(ButtonWidget.builder(Text.translatable("text.ssc_addon.adv_color.btn.save"),
-                b -> doSave()).size(100, 20).position(width / 2 + 50, btnY).build());
+                b -> doSave()).size(botBtnW, botBtnH).position(botStartX + (botBtnW + botGap) * 2, btnY).build());
 
         refreshAllFromWorking();
     }
@@ -431,6 +443,47 @@ public class AdvancedColorScreen extends Screen {
         }
     }
 
+    // ====== 每 tick 持续推送预览 ======
+    // 必要性：客机 SSC 主包 tick 会用服务端 ColorComponent 覆盖 PlayerSkinComponent，
+    // 若不在每 tick 把 working 重新 applyPreview 一次，
+    // 从 UnsavedConfirmScreen 返回主屏后下 1 tick 就会被覆盖回"编辑前"颜色。
+    @Override
+    public void tick() {
+        super.tick();
+        if (working != null) {
+            AdvancedColorBridge.applyPreview(working);
+        }
+    }
+
+    /** 给 PalettePresetsScreen 等子屏在驻留时持续 push 预览用。 */
+    public AdvancedColorBridge.WorkingState getWorkingForPreview() {
+        return working;
+    }
+
+    /** 让预设屏 apply 某个槽位后，同步更新本屏 working，避免 tick 恣复发心推回旧色。 */
+    public void applyPaletteData(net.onixary.shapeShifterCurseFabric.ssc_addon.palette.PaletteCodec.PaletteData data) {
+        if (working == null) {
+            this.initialSnapshot = AdvancedColorBridge.snapshotFromConfig();
+            this.working = initialSnapshot.copy();
+            this.previewBackup = AdvancedColorBridge.backupPreview();
+        }
+        working.enabled = true;
+        working.colorsARGB[AdvancedColorBridge.IDX_PRIMARY] = rgbaToArgb(data.primaryRGBA());
+        working.colorsARGB[AdvancedColorBridge.IDX_ACCENT1] = rgbaToArgb(data.accent1RGBA());
+        working.colorsARGB[AdvancedColorBridge.IDX_ACCENT2] = rgbaToArgb(data.accent2RGBA());
+        working.colorsARGB[AdvancedColorBridge.IDX_EYE_A]   = rgbaToArgb(data.eyeARGBA());
+        working.colorsARGB[AdvancedColorBridge.IDX_EYE_B]   = rgbaToArgb(data.eyeBRGBA());
+        working.greyReverse[AdvancedColorBridge.GR_IDX_PRIMARY] = data.primaryGreyReverse();
+        working.greyReverse[AdvancedColorBridge.GR_IDX_ACCENT1] = data.accent1GreyReverse();
+        working.greyReverse[AdvancedColorBridge.GR_IDX_ACCENT2] = data.accent2GreyReverse();
+        AdvancedColorBridge.applyPreview(working);
+    }
+
+    /** PaletteCodec 出的是 RGBA(R 高字节)，working 内存是 ARGB。 */
+    private static int rgbaToArgb(int rgba) {
+        return ((rgba & 0xFF) << 24) | ((rgba >>> 8) & 0x00FFFFFF);
+    }
+
     // ====== 鼠标事件转发给 HSV 拾色器 ======
 
     @Override
@@ -461,18 +514,8 @@ public class AdvancedColorScreen extends Screen {
 
     private void requestCancel() {
         if (isDirty()) {
-            MinecraftClient.getInstance().setScreen(new net.minecraft.client.gui.screen.ConfirmScreen(
-                    yes -> {
-                        if (yes) {
-                            performCancel();
-                        } else {
-                            // 继续编辑
-                            MinecraftClient.getInstance().setScreen(this);
-                        }
-                    },
-                    Text.translatable("text.ssc_addon.adv_color.confirm.cancel_title"),
-                    Text.translatable("text.ssc_addon.adv_color.confirm.cancel_msg")
-            ));
+            // 3 选项未保存确认：保存并退出 / 直接退出 / 返回
+            MinecraftClient.getInstance().setScreen(new UnsavedConfirmScreen(this));
         } else {
             performCancel();
         }
@@ -547,6 +590,66 @@ public class AdvancedColorScreen extends Screen {
                 int v = (int) Math.round(this.value * 255.0);
                 onValueChanged.accept(v);
             }
+        }
+    }
+
+    /** 未保存退出确认：3 选项（保存并退出 / 直接退出 / 返回）。 */
+    private static class UnsavedConfirmScreen extends Screen {
+        private final AdvancedColorScreen owner;
+
+        protected UnsavedConfirmScreen(AdvancedColorScreen owner) {
+            super(Text.translatable("text.ssc_addon.adv_color.confirm.unsaved_title"));
+            this.owner = owner;
+        }
+
+        @Override
+        protected void init() {
+            int btnW = 160;
+            int btnH = 20;
+            int gap  = 6;
+            int x = (width - btnW) / 2;
+            // 按钮起始 y 放到画面中央 +20，腾出上方空间给标题与说明文字
+            int y = height / 2 + 20;
+
+            addDrawableChild(ButtonWidget.builder(
+                    Text.translatable("text.ssc_addon.adv_color.confirm.save_and_exit"),
+                    b -> owner.doSave()
+            ).size(btnW, btnH).position(x, y).build());
+
+            addDrawableChild(ButtonWidget.builder(
+                    Text.translatable("text.ssc_addon.adv_color.confirm.discard_and_exit"),
+                    b -> owner.performCancel()
+            ).size(btnW, btnH).position(x, y + (btnH + gap)).build());
+
+            addDrawableChild(ButtonWidget.builder(
+                    Text.translatable("text.ssc_addon.adv_color.confirm.back"),
+                    b -> MinecraftClient.getInstance().setScreen(owner)
+            ).size(btnW, btnH).position(x, y + (btnH + gap) * 2).build());
+        }
+
+        @Override
+        public void render(DrawContext ctx, int mx, int my, float delta) {
+            this.renderBackground(ctx);
+            // 标题与说明文字往上挪，与按钮区分开
+            ctx.drawCenteredTextWithShadow(this.textRenderer, this.title, width / 2, height / 2 - 40, 0xFFFFFF);
+            ctx.drawCenteredTextWithShadow(this.textRenderer,
+                    Text.translatable("text.ssc_addon.adv_color.confirm.unsaved_msg"),
+                    width / 2, height / 2 - 20, 0xC0C0C0);
+            super.render(ctx, mx, my, delta);
+        }
+
+        @Override
+        public void tick() {
+            // 在确认期间持续把 working 颜色推回预览，
+            // 防止客机 tick 用服务端旧 ColorComponent 覆盖回"编辑前"颜色，
+            // 这样玩家点"返回继续编辑"时看到的颜色与编辑前的 RGBA 数值一致。
+            net.onixary.shapeShifterCurseFabric.ssc_addon.client.colorpicker.AdvancedColorBridge
+                    .applyPreview(owner.working);
+        }
+
+        @Override
+        public void close() {
+            MinecraftClient.getInstance().setScreen(owner);
         }
     }
 }
