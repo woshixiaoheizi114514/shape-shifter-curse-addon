@@ -35,7 +35,7 @@ public class Form_Allay extends PlayerFormBase {
 		super(formID);
 	}
 
-	@Override
+	// SSC 1.9.0 起 PlayerFormBase 已移除该 v2 API
 	public AnimationHolder Anim_getFormAnimToPlay(PlayerAnimState currentState) {
 		return switch (currentState) {
 			case ANIM_RUN -> anim_run;
@@ -49,7 +49,7 @@ public class Form_Allay extends PlayerFormBase {
 		};
 	}
 
-	@Override
+	// SSC 1.9.0 起 PlayerFormBase 已移除该 v2 API
 	public void Anim_registerAnims() {
 		anim_walk = new AnimationHolder(new Identifier(ANIM_NS, "allay_sp_moving"), true);
 		anim_run = new AnimationHolder(new Identifier(ANIM_NS, "allay_sp_run"), true);

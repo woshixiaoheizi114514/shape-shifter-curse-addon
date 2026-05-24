@@ -42,7 +42,7 @@ public abstract class AbstractFeralForm extends PlayerFormBase {
 		this.setBodyType(PlayerFormBodyType.FERAL);
 	}
 
-	@Override
+	// SSC 1.9.0 起 PlayerFormBase 已移除该 v2 API，保留作 v3 状态控制器的内部映射用
 	public AnimationHolder Anim_getFormAnimToPlay(PlayerAnimState currentState) {
 		return getAnimStateMapping(currentState);
 	}
@@ -68,7 +68,7 @@ public abstract class AbstractFeralForm extends PlayerFormBase {
 		};
 	}
 
-	@Override
+	// SSC 1.9.0 起 PlayerFormBase 已移除该 v2 API；子类仍通过 super 调用初始化字段，故保留
 	public void Anim_registerAnims() {
 		anim_idle = new AnimationHolder(new Identifier(MOD_ID, getAnimId("idle")), true);
 		anim_sneak_idle = new AnimationHolder(new Identifier(MOD_ID, getAnimId("sneak_idle")), true);

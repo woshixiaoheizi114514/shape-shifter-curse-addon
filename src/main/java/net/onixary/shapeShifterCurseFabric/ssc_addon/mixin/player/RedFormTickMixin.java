@@ -1,6 +1,8 @@
 package net.onixary.shapeShifterCurseFabric.ssc_addon.mixin.player;
 
 import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
@@ -79,28 +81,8 @@ public class RedFormTickMixin {
 		// === SP Allay Form: Auto-grant heal wand (slot 0) and jukebox (slot 1) ===
 		boolean isAllaySp = currentForm != null && currentForm.FormID.equals(new Identifier("my_addon", "allay_sp"));
 		if (isAllaySp) {
-			// Slot 0: Allay Heal Wand
-			ItemStack stackInSlot0 = player.getInventory().getStack(0);
-			if (!stackInSlot0.isOf(SscAddon.ALLAY_HEAL_WAND)) {
-				if (!stackInSlot0.isEmpty()) {
-					if (!player.getInventory().insertStack(stackInSlot0.copy())) {
-						player.dropItem(stackInSlot0, false, true);
-					}
-					player.getInventory().setStack(0, ItemStack.EMPTY);
-				}
-				player.getInventory().setStack(0, new ItemStack(SscAddon.ALLAY_HEAL_WAND));
-			}
-			// Slot 1: Allay Jukebox
-			ItemStack stackInSlot1 = player.getInventory().getStack(1);
-			if (!stackInSlot1.isOf(SscAddon.ALLAY_JUKEBOX)) {
-				if (!stackInSlot1.isEmpty()) {
-					if (!player.getInventory().insertStack(stackInSlot1.copy())) {
-						player.dropItem(stackInSlot1, false, true);
-					}
-					player.getInventory().setStack(1, ItemStack.EMPTY);
-				}
-				player.getInventory().setStack(1, new ItemStack(SscAddon.ALLAY_JUKEBOX));
-			}
+			placeFormItemSafe(player, 0, SscAddon.ALLAY_HEAL_WAND);
+			placeFormItemSafe(player, 1, SscAddon.ALLAY_JUKEBOX);
 		} else {
 			// Not Allay SP: Remove any allay items found
 			for (int i = 0; i < player.getInventory().size(); ++i) {
@@ -114,20 +96,7 @@ public class RedFormTickMixin {
 		}
 
 		if (isRedForm) {
-			ItemStack stackInSlot8 = player.getInventory().getStack(8);
-			if (!stackInSlot8.isOf(SscAddon.POTION_BAG)) {
-				// If the player doesn't have the bag in slot 8
-				if (!stackInSlot8.isEmpty()) {
-					// Try to move existing item to main inventory
-					if (!player.getInventory().insertStack(stackInSlot8)) {
-						// Inventory full, drop it
-						player.dropItem(stackInSlot8, false, true);
-					}
-					player.getInventory().setStack(8, ItemStack.EMPTY);
-				}
-				// Give Potion Bag
-				player.getInventory().setStack(8, new ItemStack(SscAddon.POTION_BAG));
-			}
+			placeFormItemSafe(player, 8, SscAddon.POTION_BAG);
 		} else {
 			// Not Red Form: Remove any Potion Bag found
 			for (int i = 0; i < player.getInventory().size(); ++i) {
@@ -200,5 +169,60 @@ public class RedFormTickMixin {
 				player.sendMessage(Text.translatable("message.ssc_addon.red_revert_timeout").formatted(Formatting.GREEN), false);
 			}
 		}
+	}
+
+	/**
+	 * 安全地把指定形态物品放进固定槽位，避免覆盖玩家原有物品。
+	 * 严格按用户要求执行：
+	 *   1. 检测目标槽位是否已经是该形态物品；是则直接返回，什么都不做。
+	 *   2. 把原物品取出（copy 后清空源槽），先尝试合并到背包内已存在的同种物品堆（包含快捷栏）。
+	 *   3. 若仍有剩余，尝试塞入背包任意空槽（已排除目标槽位）。
+	 *   4. 仍剩余则丢到地上，绝对不会静默删除。
+	 * 最后把形态物品放进目标槽位。
+	 */
+	@org.spongepowered.asm.mixin.Unique
+	private void placeFormItemSafe(ServerPlayerEntity player, int targetSlot, Item formItem) {
+		PlayerInventory inv = player.getInventory();
+		ItemStack existing = inv.getStack(targetSlot);
+
+		// Step 1: 目标槽位已是该物品 → 不动
+		if (existing.isOf(formItem)) return;
+
+		// 先把原物品 copy 出来，并清空源槽，以便插入算法不会再把它放回原位
+		ItemStack moved = existing.copy();
+		inv.setStack(targetSlot, ItemStack.EMPTY);
+
+		if (!moved.isEmpty()) {
+			// Step 2: 优先合并到背包内同种物品（遍历整个主物品栏 0~35，含快捷栏，跳过 targetSlot）
+			for (int i = 0; i < inv.main.size() && !moved.isEmpty(); ++i) {
+				if (i == targetSlot) continue;
+				ItemStack slotStack = inv.main.get(i);
+				if (slotStack.isEmpty()) continue;
+				if (!ItemStack.canCombine(slotStack, moved)) continue;
+				int room = slotStack.getMaxCount() - slotStack.getCount();
+				if (room <= 0) continue;
+				int merge = Math.min(room, moved.getCount());
+				slotStack.increment(merge);
+				moved.decrement(merge);
+			}
+
+			// Step 3: 还有剩余 → 找空槽（排除 targetSlot）
+			if (!moved.isEmpty()) {
+				for (int i = 0; i < inv.main.size() && !moved.isEmpty(); ++i) {
+					if (i == targetSlot) continue;
+					if (!inv.main.get(i).isEmpty()) continue;
+					inv.main.set(i, moved.copy());
+					moved.setCount(0);
+				}
+			}
+
+			// Step 4: 仍有剩余 → 丢到地上
+			if (!moved.isEmpty()) {
+				player.dropItem(moved, false, true);
+			}
+		}
+
+		// 最后放入形态物品
+		inv.setStack(targetSlot, new ItemStack(formItem));
 	}
 }

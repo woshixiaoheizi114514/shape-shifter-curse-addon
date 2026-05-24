@@ -45,7 +45,7 @@ public class Form_Axolotl3 extends PlayerFormBase {
 		super(formID);
 	}
 
-	@Override
+	// SSC 1.9.0 起 PlayerFormBase 已移除该 v2 API
 	public AnimationHolder Anim_getFormAnimToPlay(PlayerAnimState currentState) {
 		return switch (currentState) {
 			case ANIM_JUMP, ANIM_FALL -> anim_jump;
@@ -65,7 +65,7 @@ public class Form_Axolotl3 extends PlayerFormBase {
 		};
 	}
 
-	@Override
+	// SSC 1.9.0 起 PlayerFormBase 已移除该 v2 API
 	public void Anim_registerAnims() {
 		anim_swimming = new AnimationHolder(new Identifier(MOD_ID, "axolotl_2_swimming"), true);
 		anim_swimming_idle = new AnimationHolder(new Identifier(MOD_ID, "axolotl_2_swimming_idle"), true);
