@@ -5,6 +5,7 @@
   "bodyType": "FERAL",
   "isCustomForm": false,
   "originID": "my_addon:form_snow_fox_sp",
+  "FurModelID": "my_addon:form_snow_fox_sp",
   "hasSlowFall": false,
   "canSneakRush": false,
   "canRushJump": false,

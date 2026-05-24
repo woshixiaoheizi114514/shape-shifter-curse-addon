@@ -5,6 +5,7 @@
     "bodyType": "NORMAL",
     "isCustomForm": false,
     "originID": "my_addon:form_axolotl_sp",
+    "FurModelID": "my_addon:form_axolotl_sp",
     "hasSlowFall": false,
     "canSneakRush": false,
     "canRushJump": true,

@@ -5,6 +5,7 @@
   "bodyType": "NORMAL",
   "isCustomForm": false,
   "originID": "my_addon:form_fallen_allay_sp",
+  "FurModelID": "my_addon:form_fallen_allay_sp",
   "hasSlowFall": true,
   "canSneakRush": false,
   "canRushJump": false,

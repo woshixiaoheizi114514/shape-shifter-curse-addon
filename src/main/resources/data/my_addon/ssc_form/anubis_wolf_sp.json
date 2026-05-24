@@ -5,6 +5,7 @@
   "bodyType": "FERAL",
   "isCustomForm": false,
   "originID": "my_addon:form_anubis_wolf_sp",
+  "FurModelID": "my_addon:form_anubis_wolf_sp",
   "hasSlowFall": false,
   "canSneakRush": true,
   "canRushJump": false,

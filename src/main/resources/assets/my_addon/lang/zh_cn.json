@@ -451,7 +451,6 @@
     "text.ssc_addon.adv_color.slot.eye_a":  "瞳色 A",
     "text.ssc_addon.adv_color.col.wheel":  "全色图",
     "text.ssc_addon.palette.btn.to_editor":  "→ 颜色编辑器",
-    "text.autoconfig.ssc_addon_client.option.enableColorEditor.@Tooltip":  "开启后将使用 SSCA 自己的颜色编辑器和 20 槽预设管理，并自动替换原版 SSC 的颜色编辑界面；关闭则恢复使用原版颜色编辑功能。已保存的颜色数据无论开关如何都保留。",
     "text.ssc_addon.adv_color.btn.cancel":  "取消",
     "text.ssc_addon.adv_color.grey_reverse.accent2":  "点缀色 2 反转灰度",
     "text.ssc_addon.adv_color.col.rgba":  "RGBA 数值",
@@ -521,5 +520,19 @@
     "advancements.ssc_addon.boom_boom_boom.title":  "Boom Boom Boom！",
     "advancements.ssc_addon.boom_boom_boom.description":  "我叫磁力棒",
     "advancements.ssc_addon.player_form_shock.title":  "哦？玩家的样子......！",
-    "advancements.ssc_addon.player_form_shock.description":  "什么叫你给我用了火之石？"
+    "advancements.ssc_addon.player_form_shock.description":  "什么叫你给我用了火之石？",
+    "my_addon.form_allay_sp.model_name":  "sp悦灵",
+    "my_addon.form_fallen_allay_sp.model_name":  "堕落之灵",
+    "my_addon.form_anubis_wolf_sp.model_name":  "sp阿努比斯",
+    "my_addon.form_axolotl_sp.model_name":  "sp蝾螈(深渊霸主)",
+    "my_addon.form_familiar_fox_red.model_name":  "红",
+    "my_addon.form_snow_fox_sp.model_name":  "sp雪狐",
+    "my_addon.form_familiar_fox_sp.model_name":  "sp使魔",
+    "my_addon.form_familiar_fox_mancianima.model_name":  "契灵",
+    "my_addon.form_wild_cat_sp.model_name":  "sp野猫",
+    "my_addon.form_golden_sandstorm_sp.model_name":  "金沙岚",
+    "item.ssc_addon.frost_protection_ring":  "防霜护身环",
+    "item.ssc_addon.frost_protection_ring.tooltip.1":  "§bsp雪狐专属",
+    "item.ssc_addon.frost_protection_ring.tooltip.2":  "§7魔力上限 +20",
+    "item.ssc_addon.frost_protection_ring.tooltip.3":  "魔力恢复速度 +50%"
 }

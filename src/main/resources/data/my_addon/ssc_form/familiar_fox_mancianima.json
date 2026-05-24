@@ -5,6 +5,7 @@
   "bodyType": "FERAL",
   "isCustomForm": false,
   "originID": "my_addon:form_familiar_fox_mancianima",
+  "FurModelID": "my_addon:form_familiar_fox_mancianima",
   "hasSlowFall": false,
   "canSneakRush": false,
   "canRushJump": false,
