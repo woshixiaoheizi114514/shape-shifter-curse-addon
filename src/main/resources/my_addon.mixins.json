@@ -39,7 +39,6 @@
                ],
     "client":  [
                    "render.InstinctBarRendererMixin",
-                   "render.OverlayRenderMixin",
                    "render.FormColorSelectMenuMixin",
                    "player.SscPlayerEntityRendererMixin",
                    "input.StunnedCameraMixin",
