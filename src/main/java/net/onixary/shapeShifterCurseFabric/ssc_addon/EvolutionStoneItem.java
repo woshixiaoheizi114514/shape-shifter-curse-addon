@@ -67,6 +67,11 @@ public class EvolutionStoneItem extends Item {
 					targetFormId = new Identifier("my_addon", "golden_sandstorm_sp");
 					canEvolve = true;
 				}
+				// 允许原版三阶段使魔使用进化石进化为契灵（与月髓环→灵界之主的路径并行存在）
+				else if (playerFormID.equals(new Identifier("shape-shifter-curse", "familiar_fox_3"))) {
+					targetFormId = new Identifier("my_addon", "familiar_fox_mancianima");
+					canEvolve = true;
+				}
 			}
 
 			if (canEvolve) {
