@@ -7,7 +7,9 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.text.Text;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.config.SSCAddonConfig;
 
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -32,6 +34,17 @@ public final class ClothConfigInjector {
             if (!isSscConfig(title)) return;
             try {
                 List<ClickableWidget> buttons = Screens.getButtons(s);
+                // 开关 OFF 时：不仅不注入，还要把上一次（开关曾经 ON 时）已经塞进去的按钮拔掉，
+                // 否则玩家在配置界面打开过一次后即便关闭开关也会留个入口，呈现"无法关闭"的假象。
+                if (!SSCAddonConfig.client().enableColorEditor) {
+                    if (containsSscaButton(buttons)) {
+                        Iterator<ClickableWidget> it = buttons.iterator();
+                        while (it.hasNext()) {
+                            if (it.next() instanceof SscaAdvButton) it.remove();
+                        }
+                    }
+                    return;
+                }
                 if (containsSscaButton(buttons)) return; // 已有，无需重复 add
                 int btnW = 120;
                 ButtonWidget btn = new SscaAdvButton(
