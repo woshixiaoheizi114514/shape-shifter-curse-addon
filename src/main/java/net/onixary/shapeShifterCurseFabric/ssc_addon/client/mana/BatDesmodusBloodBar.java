@@ -20,8 +20,8 @@ import net.onixary.shapeShifterCurseFabric.util.UIPositionUtils;
 @Environment(EnvType.CLIENT)
 public class BatDesmodusBloodBar implements HudRenderCallback {
 	private static final MinecraftClient mc = MinecraftClient.getInstance();
-	private static final Identifier BarTexFullID = new Identifier("my_addon", "textures/gui/anubis_wolf_sp_soul_bar_full.png");
-	private static final Identifier BarTexEmptyID = new Identifier("my_addon", "textures/gui/anubis_wolf_sp_soul_bar_empty.png");
+	private static final Identifier BarTexFullID = new Identifier("my_addon", "textures/gui/bat_desmodus_blood_bar_full.png");
+	private static final Identifier BarTexEmptyID = new Identifier("my_addon", "textures/gui/bat_desmodus_blood_bar_empty.png");
 	private static final Identifier RESOURCE_ID = new Identifier("my_addon", "form_bat_desmodus_blood_resource");
 
 	@Override
