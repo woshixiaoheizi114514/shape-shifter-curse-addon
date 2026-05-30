@@ -591,6 +591,30 @@ public class GoldenSandstormErosionBrand {
 		DIRTY_PLAYERS.clear();
 	}
 
+	/** 重连/换维度后强制把当前烙印状态同步给该玩家（无视 dirty 标记） */
+	public static void resyncToPlayer(ServerPlayerEntity player) {
+		Map<UUID, BrandState> playerBrands = ACTIVE_BRANDS.get(player.getUuid());
+		PacketByteBuf buf = PacketByteBufs.create();
+		if (playerBrands == null || playerBrands.isEmpty()) {
+			buf.writeInt(0);
+		} else {
+			List<Map.Entry<UUID, String>> entries = new ArrayList<>();
+			for (Map.Entry<UUID, BrandState> entry : playerBrands.entrySet()) {
+				String color = getColorFromState(entry.getValue());
+				if (color != null) entries.add(Map.entry(entry.getKey(), color));
+			}
+			buf.writeInt(entries.size());
+			for (Map.Entry<UUID, String> entry : entries) {
+				buf.writeUuid(entry.getKey());
+				buf.writeString(entry.getValue());
+			}
+		}
+		try {
+			ServerPlayNetworking.send(player, PACKET_BRAND_SYNC, buf);
+		} catch (Exception ignored) {}
+		DIRTY_PLAYERS.remove(player.getUuid());
+	}
+
 	// ==================== 网络同步方法 ====================
 
 	/**

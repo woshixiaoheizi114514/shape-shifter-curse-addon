@@ -363,6 +363,11 @@ public final class MancianimaMarkManager {
 		} catch (Exception ignored) {}
 	}
 
+	/** 重连/换维度后强制把当前 mark 状态同步给该玩家，保证客户端 HUD/标记正确 */
+	public static void resyncToPlayer(ServerPlayerEntity player) {
+		sendSyncPacket(player);
+	}
+
 	public static void playSoundToPlayer(ServerPlayerEntity player, SoundEvent sound, float volume, float pitch) {
 		RegistryEntry<SoundEvent> entry = Registries.SOUND_EVENT.getEntry(sound);
 		player.networkHandler.sendPacket(new PlaySoundS2CPacket(

@@ -630,6 +630,12 @@ public class SscAddon implements ModInitializer {
 		// 玩家首次进入世界时发送欢迎消息（延迟3秒，等待客户端语言设置到达服务端后根据语言发送对应文本）
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			var player = handler.player;
+			// 重连/换维度回归后：强制把契灵标记 + 金沙岚侵蚀印记状态重新同步给客户端，
+			// 避免重连后客户端 HUD/渲染缓存为空，直到下一次状态变更才被动恢复。
+			server.execute(() -> {
+				try { net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaMarkManager.resyncToPlayer(player); } catch (Throwable ignored) {}
+				try { net.onixary.shapeShifterCurseFabric.ssc_addon.ability.GoldenSandstormErosionBrand.resyncToPlayer(player); } catch (Throwable ignored) {}
+			});
 			String welcomeTag = "ssc_addon_welcomed";
 			if (!player.getCommandTags().contains(welcomeTag)) {
 				player.addCommandTag(welcomeTag);

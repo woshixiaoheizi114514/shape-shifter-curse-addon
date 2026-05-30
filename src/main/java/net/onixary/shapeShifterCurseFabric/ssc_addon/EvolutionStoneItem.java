@@ -86,7 +86,8 @@ public class EvolutionStoneItem extends Item {
 					// 成就：哦？玩家的样子......！- 首次使用进化石进化
 					AdvancementUtils.grant(player, new Identifier("ssc_addon", "player_form_shock"));
 				} else {
-					player.sendMessage(Text.literal("Error: Target form not found! ID: " + targetFormId).formatted(Formatting.RED), false);
+					// 走 lang key，避免硬编码（合规 #48）
+					player.sendMessage(Text.translatable("message.ssc_addon.evolution_stone.target_not_found", targetFormId).formatted(Formatting.RED), false);
 				}
 			} else {
 				player.sendMessage(Text.translatable("message.ssc_addon.evolution_stone.no_response").formatted(Formatting.RED), true);
