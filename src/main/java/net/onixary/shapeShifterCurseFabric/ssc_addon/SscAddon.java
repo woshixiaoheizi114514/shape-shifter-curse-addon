@@ -440,6 +440,7 @@ public class SscAddon implements ModInitializer {
 				GoldenSandstormErosionBrand.tick(player);
 				GoldenSandstormWitherSand.tick(player);
 				GoldenSandstormRegen.tick(player);
+				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.BatDesmodusBloodThirst.tick(player);
 				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive.tick(player);
 			}
 		});
@@ -458,6 +459,7 @@ public class SscAddon implements ModInitializer {
 			GoldenSandstormErosionBrand.clearAll();
 			GoldenSandstormWitherSand.clearAll(server);
 			GoldenSandstormRegen.clearAll();
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.BatDesmodusBloodThirst.clearAll();
 			UndeadNeutralState.clearAll();
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive.clearAll();
 			net.onixary.shapeShifterCurseFabric.ssc_addon.action.SscAddonActions.clearAll();
@@ -486,6 +488,7 @@ public class SscAddon implements ModInitializer {
 			GoldenSandstormErosionBrand.clearAll();
 			GoldenSandstormWitherSand.clearAll(server);
 			GoldenSandstormRegen.clearAll();
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.BatDesmodusBloodThirst.clearAll();
 			UndeadNeutralState.clearAll();
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive.clearAll();
 			net.onixary.shapeShifterCurseFabric.ssc_addon.action.SscAddonActions.clearAll();

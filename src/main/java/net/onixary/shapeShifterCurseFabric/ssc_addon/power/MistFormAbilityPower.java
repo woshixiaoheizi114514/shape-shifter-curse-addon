@@ -199,6 +199,8 @@ public class MistFormAbilityPower extends ActiveCooldownPower {
 		double radiusSq = AOE_RADIUS * AOE_RADIUS;
 		List<LivingEntity> targets = serverWorld.getEntitiesByClass(LivingEntity.class, box,
 				living -> living != entity && living.isAlive());
+		// 收集真正命中（非白名单）的目标，供血渴值「凝聚爆破命中 +12/6/3」结算
+		java.util.List<LivingEntity> hitTargets = new java.util.ArrayList<>();
 		for (LivingEntity target : targets) {
 			if (entity.squaredDistanceTo(target) > radiusSq) continue;
 			// 默认白名单：受保护个体（玩家及其宠物/召唤物）不受伤害与击退
@@ -208,6 +210,11 @@ public class MistFormAbilityPower extends ActiveCooldownPower {
 			target.damage(source, AOE_DAMAGE);
 			// 从玩家位置向外击退
 			target.takeKnockback(AOE_KNOCKBACK, entity.getX() - target.getX(), entity.getZ() - target.getZ());
+			hitTargets.add(target);
+		}
+		if (entity instanceof ServerPlayerEntity serverPlayer && !hitTargets.isEmpty()) {
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.BatDesmodusBloodThirst
+					.onSkillHit(serverPlayer, hitTargets);
 		}
 		// 爆破粒子与音效
 		ParticleUtils.spawnParticles(serverWorld, ParticleTypes.EXPLOSION,

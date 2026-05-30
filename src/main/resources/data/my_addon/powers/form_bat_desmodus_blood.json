@@ -1,5 +1,7 @@
 {
     "type": "origins:multiple",
+    "name": "血渴值",
+    "description": "战斗中每秒+1；普攻命中+8(0.3s内CD)；凝聚爆破命中+12/6/3；击杀+15。脱战12s后每秒-4。0-25：减伤15%；50-75：吸血20%；75-100：伤害+15%且吸血35%。",
     "resource": {
         "type": "origins:resource",
         "min": 0,
@@ -7,32 +9,6 @@
         "start_value": 100,
         "hud_render": {
             "should_render": false
-        }
-    },
-    "regen": {
-        "type": "origins:action_over_time",
-        "interval": 5,
-        "entity_action": {
-            "type": "origins:change_resource",
-            "resource": "my_addon:form_bat_desmodus_blood_resource",
-            "change": 1,
-            "operation": "add"
-        },
-        "condition": {
-            "type": "origins:and",
-            "conditions": [
-                {
-                    "type": "origins:resource",
-                    "resource": "my_addon:form_bat_desmodus_blood_resource",
-                    "comparison": "<",
-                    "compare_to": 100
-                },
-                {
-                    "type": "origins:status_effect",
-                    "effect": "ssc_addon:mist_form",
-                    "inverted": true
-                }
-            ]
         }
     }
 }

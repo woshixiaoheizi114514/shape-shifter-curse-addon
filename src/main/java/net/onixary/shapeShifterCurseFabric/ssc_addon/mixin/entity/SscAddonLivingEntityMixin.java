@@ -15,6 +15,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.GoldenSandstormRegen;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.AllaySPRangedHitPassive;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaMarkManager;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.BatDesmodusBloodThirst;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.power.EffectEfficiencyReductionPower;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormUtils;
@@ -215,6 +216,99 @@ public abstract class SscAddonLivingEntityMixin {
 				if (m != null && m.color == MancianimaMarkManager.MarkColor.RED) {
 					args.set(1, amount * 0.75f);
 				}
+			}
+		}
+	}
+
+	// ============== 吸血蝙蝠 - 血渴值系统 ==============
+
+	/**
+	 * 蝙蝠玩家受到/造成伤害时的战斗打点（HEAD）。
+	 * - 攻击方为蝙蝠玩家：标记战斗
+	 * - 受害方为蝙蝠玩家：标记战斗
+	 * 实际命中累计 +8 走 RETURN 分支（保证伤害真正生效）。
+	 */
+	@Inject(method = "damage", at = @At("HEAD"))
+	private void ssc_addon$batDesmodusCombatHead(DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
+		LivingEntity self = (LivingEntity) (Object) this;
+		if (self.getWorld().isClient()) return;
+		if (source.getAttacker() instanceof ServerPlayerEntity attacker
+				&& FormUtils.isForm(attacker, FormIdentifiers.BAT_DESMODUS)) {
+			BatDesmodusBloodThirst.markCombat(attacker);
+		}
+		if (self instanceof ServerPlayerEntity sp
+				&& source.getAttacker() != null && source.getAttacker() != sp
+				&& FormUtils.isForm(sp, FormIdentifiers.BAT_DESMODUS)) {
+			BatDesmodusBloodThirst.markCombat(sp);
+		}
+	}
+
+	/**
+	 * 蝙蝠玩家普攻命中其它生物（伤害真正生效）→ 累计 +8（受白名单与 0.3s 内CD约束）。
+	 * 同时承担「造成伤害的吸血效果」：50-75 → 20%、75-100 → 35%。
+	 */
+	@Inject(method = "damage", at = @At("RETURN"))
+	private void ssc_addon$batDesmodusOnHit(DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
+		if (!cir.getReturnValue()) return;
+		LivingEntity self = (LivingEntity) (Object) this;
+		if (self.getWorld().isClient()) return;
+		if (!(source.getAttacker() instanceof ServerPlayerEntity attacker)) return;
+		if (!FormUtils.isForm(attacker, FormIdentifiers.BAT_DESMODUS)) return;
+		if (self == attacker) return;
+
+		// 普攻命中：仅近战玩家攻击算（排除魔法 / 间接魔法 / 起爆 AOE 等）
+		// 标准玩家近战伤害 source 类型为 player_attack
+		boolean isMeleeAttack = source.isOf(net.minecraft.entity.damage.DamageTypes.PLAYER_ATTACK);
+		if (isMeleeAttack) {
+			BatDesmodusBloodThirst.onAttackHit(attacker, self);
+		}
+
+		// 吸血：玩家亲手造成的近战 / 起爆 AOE 都吸血（魔法源 + 玩家发起，但排除环境 / 间接伤害）
+		if (isMeleeAttack || (source.getSource() == attacker
+				&& !source.isOf(net.minecraft.entity.damage.DamageTypes.INDIRECT_MAGIC)
+				&& !source.isOf(net.minecraft.entity.damage.DamageTypes.OUT_OF_WORLD)
+				&& !source.isOf(net.minecraft.entity.damage.DamageTypes.GENERIC_KILL))) {
+			int stage = BatDesmodusBloodThirst.getStage(attacker);
+			float lifestealRate = 0f;
+			if (stage == 2) lifestealRate = 0.20f;
+			else if (stage == 3) lifestealRate = 0.35f;
+			if (lifestealRate > 0f && amount > 0f) {
+				attacker.heal(amount * lifestealRate);
+			}
+		}
+	}
+
+	/**
+	 * 血渴值阶段对伤害的修正（同时处理 incoming 与 outgoing，复用 applyDamage 调用点）：
+	 * - 受害方为蝙蝠玩家 + 0-25 阶段 → 受到伤害 ×0.85（排除虚空 / 直接击杀 / 间接魔法-喷溅滞留药水）
+	 * - 攻击方为蝙蝠玩家 + 75-100 阶段 → 造成伤害 ×1.15
+	 */
+	@ModifyArgs(method = "damage", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;applyDamage(Lnet/minecraft/entity/damage/DamageSource;F)V"))
+	private void ssc_addon$batDesmodusDamageScaling(Args args) {
+		LivingEntity self = (LivingEntity) (Object) this;
+		if (self.getWorld().isClient()) return;
+		DamageSource source = args.get(0);
+		float amount = args.get(1);
+		Entity attacker = source.getAttacker();
+
+		// 0-25 阶段：受害方为蝙蝠玩家 → -15%
+		if (self instanceof ServerPlayerEntity sp
+				&& FormUtils.isForm(sp, FormIdentifiers.BAT_DESMODUS)
+				&& !source.isOf(DamageTypes.OUT_OF_WORLD)
+				&& !source.isOf(DamageTypes.GENERIC_KILL)
+				&& !source.isOf(DamageTypes.INDIRECT_MAGIC)) {
+			if (BatDesmodusBloodThirst.getStage(sp) == 0) {
+				amount *= 0.85f;
+				args.set(1, amount);
+			}
+		}
+
+		// 75-100 阶段：攻击方为蝙蝠玩家 → +15%
+		if (attacker instanceof ServerPlayerEntity ap
+				&& attacker != self
+				&& FormUtils.isForm(ap, FormIdentifiers.BAT_DESMODUS)) {
+			if (BatDesmodusBloodThirst.getStage(ap) == 3) {
+				args.set(1, amount * 1.15f);
 			}
 		}
 	}
