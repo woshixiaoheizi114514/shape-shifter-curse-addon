@@ -116,6 +116,8 @@ public class SscAddonClient implements ClientModInitializer {
 		// 注册侵蚀烙印 S2C 同步包接收器
 		ClientPlayNetworking.registerGlobalReceiver(GoldenSandstormErosionBrand.PACKET_BRAND_SYNC, (client, handler, buf, responseSender) -> {
 			int count = buf.readInt();
+			// 安全守卫：防止被劫持服务器发超大 count 导致客机 OOM
+			if (count < 0 || count > 10000) return;
 			java.util.Map<java.util.UUID, String> brands = new java.util.HashMap<>();
 			for (int i = 0; i < count; i++) {
 				java.util.UUID uuid = buf.readUuid();
@@ -128,6 +130,8 @@ public class SscAddonClient implements ClientModInitializer {
 		// 注册契灵标记 S2C 同步包接收器
 		ClientPlayNetworking.registerGlobalReceiver(MancianimaMarkManager.PACKET_MARK_SYNC, (client, handler, buf, responseSender) -> {
 			int count = buf.readInt();
+			// 安全守卫：防止被劫持服务器发超大 count 导致客机 OOM
+			if (count < 0 || count > 10000) return;
 			java.util.Map<java.util.UUID, String> marks = new java.util.HashMap<>();
 			for (int i = 0; i < count; i++) {
 				java.util.UUID uuid = buf.readUuid();
@@ -141,9 +145,12 @@ public class SscAddonClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking.PACKET_WHITELIST_GUI_SYNC, (client, handler, buf, responseSender) -> {
 			boolean customMode = buf.readBoolean();
 			int n = buf.readInt();
+			// 安全守卫：防止被劫持服务器发超大 count 导致客机 OOM
+			if (n < 0 || n > 10000) return;
 			java.util.Set<java.util.UUID> set = new java.util.HashSet<>();
 			for (int i = 0; i < n; i++) set.add(buf.readUuid());
 			int m = buf.readInt();
+			if (m < 0 || m > 10000) return;
 			java.util.List<net.onixary.shapeShifterCurseFabric.ssc_addon.client.screen.WhitelistManageScreen.MobEntry> mobs = new java.util.ArrayList<>();
 			for (int i = 0; i < m; i++) {
 				java.util.UUID u = buf.readUuid();

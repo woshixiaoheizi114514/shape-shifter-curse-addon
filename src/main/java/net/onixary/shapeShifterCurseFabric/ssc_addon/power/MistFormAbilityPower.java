@@ -60,7 +60,8 @@ public class MistFormAbilityPower extends ActiveCooldownPower {
 	private static final DustParticleEffect BLOOD_DUST = new DustParticleEffect(new org.joml.Vector3f(0.78f, 0.06f, 0.06f), 1.2f);
 	// 雾血资源相关（0~100）
 	private static final int BLOOD_ENTER_COST = 0;     // 进入雾化起手消耗（无消耗）
-	private static final int BLOOD_PER_SECOND_COST = 0; // 雾化期间每秒持续消耗（无消耗）
+	@SuppressWarnings("unused") // 预留可调参数：后续若要恢复雾化期间的每秒持续消耗，把值改回正数并恢复 tick() 内对应分支
+	private static final int BLOOD_PER_SECOND_COST = 0; // 雾化期间每秒持续消耗（当前 0 = 无消耗）
 	private static final int BLOOD_BURST_COST = 0;     // 凝聚爆破额外消耗（无消耗）
 	private long lastBloodDrainTime = 0L;               // 上次每秒扣血时间
 
@@ -330,17 +331,7 @@ public class MistFormAbilityPower extends ActiveCooldownPower {
 		if (mist) {
 			if (entity.getWorld().getTime() - lastBloodDrainTime >= 20) {
 				lastBloodDrainTime = entity.getWorld().getTime();
-				if (BLOOD_PER_SECOND_COST > 0) {
-					int newBlood = getBlood() - BLOOD_PER_SECOND_COST;
-					setBlood(newBlood);
-					if (newBlood <= 0) {
-						// 雾血耗尽：强制解除雾化并进入冷却
-						exitMist(true);
-						applyCooldown();
-						wasMist = false;
-						return;
-					}
-				}
+				// 雾血每秒消耗已取消（BLOOD_PER_SECOND_COST=0）；若后续要恢复可以在这里重新加回「扣血 + 耀尽强退」逻辑
 				// 75-100 血渴值阶段：血雾光环每秒对周围 2 格内非白名单生物造成 2 点伤害，每命中一次回吸血蝙蝠 2 点生命
 				if (entity instanceof ServerPlayerEntity sp
 						&& net.onixary.shapeShifterCurseFabric.ssc_addon.ability.BatDesmodusBloodThirst.getStage(sp) == 3) {

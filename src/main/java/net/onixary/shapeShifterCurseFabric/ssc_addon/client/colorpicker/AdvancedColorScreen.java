@@ -52,6 +52,7 @@ public class AdvancedColorScreen extends Screen {
     private static final long STATUS_HOLD_MS = 5000L;
     private static final long STATUS_FADE_MS = 2000L;
 
+    @SuppressWarnings("unused") // 预留给后续需要在编辑器中推送状态提示的使用场景
     private void setStatus(Text t) {
         this.statusLine = t;
         this.statusSetTimeMs = System.currentTimeMillis();
@@ -93,10 +94,9 @@ public class AdvancedColorScreen extends Screen {
         for (int i = 0; i < AdvancedColorBridge.COLOR_COUNT; i++) {
             final int idx = i;
             int sx = swatchStartX + i * (swatchSize + swatchGap);
-            ButtonWidget btn = ButtonWidget.builder(Text.literal(""), b -> {
-                editingIdx = idx;
-                refreshAllFromWorking();
-            }).size(swatchSize, swatchSize).position(sx, topY).build();
+            // 使用透明色块按钮：拑制 vanilla hover 灰色覆盖，实际塑色在 render() 里画
+            SwatchButton btn = new SwatchButton(sx, topY, swatchSize, swatchSize,
+                    b -> { editingIdx = idx; refreshAllFromWorking(); });
             colorTabs[i] = btn;
             addDrawableChild(btn);
         }
@@ -128,7 +128,8 @@ public class AdvancedColorScreen extends Screen {
         // Hex 输入 (RRGGBB 或 AARRGGBB)
         hexField = new TextFieldWidget(this.textRenderer, leftX, lineY + 92,
                 Math.min(110, colW), 18, Text.literal("#"));
-        hexField.setMaxLength(8);
+        // 9 = 「#」 + 8 位 AARRGGBB，避免带 # 的 8 位 hex 被截到 7 位
+        hexField.setMaxLength(9);
         hexField.setChangedListener(s -> { if (!suppressCallbacks) applyHexInput(s); });
         addDrawableChild(hexField);
 
@@ -242,18 +243,11 @@ public class AdvancedColorScreen extends Screen {
             int r = (argb >>> 16) & 0xFF;
             int g = (argb >>> 8) & 0xFF;
             int b = argb & 0xFF;
-            if (changedChannel != 0) { rField.setText(String.valueOf(r)); sliderR.setIntValue(r); }
-            if (changedChannel != 1) { gField.setText(String.valueOf(g)); sliderG.setIntValue(g); }
-            if (changedChannel != 2) { bField.setText(String.valueOf(b)); sliderB.setIntValue(b); }
-            if (changedChannel != 3) { aField.setText(String.valueOf(a)); sliderA.setIntValue(a); }
-            // changed channel 的另一控件也同步（滑条/文本各自）
-            // 这里简化：保证两端一致——changed 通道也回填另一端
-            switch (changedChannel) {
-                case 0: rField.setText(String.valueOf(r)); sliderR.setIntValue(r); break;
-                case 1: gField.setText(String.valueOf(g)); sliderG.setIntValue(g); break;
-                case 2: bField.setText(String.valueOf(b)); sliderB.setIntValue(b); break;
-                case 3: aField.setText(String.valueOf(a)); sliderA.setIntValue(a); break;
-            }
+            // 全部 4 通道都回填（含触发通道本身：滑条<->文本框需保持两端一致）
+            rField.setText(String.valueOf(r)); sliderR.setIntValue(r);
+            gField.setText(String.valueOf(g)); sliderG.setIntValue(g);
+            bField.setText(String.valueOf(b)); sliderB.setIntValue(b);
+            aField.setText(String.valueOf(a)); sliderA.setIntValue(a);
             hexField.setText(toHexString(argb));
             hsvPicker.setFromRgb(argb & 0x00FFFFFF);
         } finally {
@@ -590,6 +584,17 @@ public class AdvancedColorScreen extends Screen {
                 int v = (int) Math.round(this.value * 255.0);
                 onValueChanged.accept(v);
             }
+        }
+    }
+
+    /** 色块按钮：仅作为可点击 + 可叙述区域，vanilla 背景全部抑制；色块本身由 Screen.render() 自行绘制。 */
+    private static class SwatchButton extends net.minecraft.client.gui.widget.ButtonWidget {
+        SwatchButton(int x, int y, int w, int h, PressAction onPress) {
+            super(x, y, w, h, Text.literal(""), onPress, ButtonWidget.DEFAULT_NARRATION_SUPPLIER);
+        }
+        @Override
+        protected void renderButton(net.minecraft.client.gui.DrawContext ctx, int mouseX, int mouseY, float delta) {
+            // 不画任何 vanilla 背景，避免 hover 灰色覆盖外部色块绘制
         }
     }
 

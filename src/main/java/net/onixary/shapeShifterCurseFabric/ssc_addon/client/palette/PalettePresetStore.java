@@ -105,7 +105,8 @@ public final class PalettePresetStore {
         ensureDir();
         PersistedData data = new PersistedData();
         data.globalSync = globalSync; // 仅 global.json 中会被回读
-        data.slots = slots;
+        // 浅拷贝：避免 GSON 序列化期间 UI 回调变动 list 结构导致 ConcurrentModification
+        data.slots = new java.util.ArrayList<>(slots);
         try {
             Files.writeString(file, GSON.toJson(data), StandardCharsets.UTF_8);
         } catch (IOException ignored) {}
@@ -122,7 +123,7 @@ public final class PalettePresetStore {
         Path file = FabricLoader.getInstance().getConfigDir().resolve(DIR).resolve("palette_presets_export.json");
         PersistedData data = new PersistedData();
         data.globalSync = globalSync;
-        data.slots = slots;
+        data.slots = new java.util.ArrayList<>(slots);
         try {
             Files.writeString(file, GSON.toJson(data), StandardCharsets.UTF_8);
             return file.toAbsolutePath();

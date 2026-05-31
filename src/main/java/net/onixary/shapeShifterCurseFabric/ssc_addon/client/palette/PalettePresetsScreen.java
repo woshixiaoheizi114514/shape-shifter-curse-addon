@@ -40,6 +40,11 @@ public class PalettePresetsScreen extends Screen {
     private Text statusLine = Text.empty();
     private int previewSlotIdx = -1;
 
+    // 槽位输入 debounce 保存：每次编辑只打标记，tick/关屏时再写盘
+    private boolean slotsDirty = false;
+    private long lastDirtyMs = 0L;
+    private static final long SAVE_DEBOUNCE_MS = 500L;
+
     // === 布局常量 ===
     private static final int ROW_H        = 22;
     private static final int NAME_W       = 80;
@@ -119,7 +124,7 @@ public class PalettePresetsScreen extends Screen {
             row.nameField.setText(slots.get(idx).name);
             row.nameField.setChangedListener(s -> {
                 PalettePresetStore.get().getSlots().get(idx).name = s;
-                PalettePresetStore.get().save();
+                markSlotsDirty();
             });
             addDrawableChild(row.nameField);
             x += NAME_W + GAP;
@@ -210,7 +215,7 @@ public class PalettePresetsScreen extends Screen {
         PalettePresetStore.Slot slot = PalettePresetStore.get().getSlots().get(idx);
         if (trimmed.isEmpty()) {
             slot.code = "";
-            PalettePresetStore.get().save();
+            markSlotsDirty();
             field.setEditableColor(0xFFFFFF);
             return;
         }
@@ -221,12 +226,46 @@ public class PalettePresetsScreen extends Screen {
                 slot.name = "Preset " + (idx + 1);
                 if (idx < slotRows.size()) slotRows.get(idx).nameField.setText(slot.name);
             }
-            PalettePresetStore.get().save();
+            markSlotsDirty();
             field.setEditableColor(0xFFFFFF);
             setStatus("text.ssc_addon.palette.status.auto_saved", idx + 1);
         } catch (PaletteCodec.DecodeException e) {
             field.setEditableColor(0xFF5555);
         }
+    }
+
+    /** 槽位列表打脏：tick 内 debounce 时间到 / 关屏时统一 flush，避免每按一键就全量写盘。 */
+    private void markSlotsDirty() {
+        slotsDirty = true;
+        lastDirtyMs = System.currentTimeMillis();
+    }
+
+    private void flushSlotsIfDirty() {
+        if (!slotsDirty) return;
+        slotsDirty = false;
+        PalettePresetStore.get().save();
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (slotsDirty && System.currentTimeMillis() - lastDirtyMs >= SAVE_DEBOUNCE_MS) {
+            flushSlotsIfDirty();
+        }
+        // 预设屏驻留期间，如果是从 AdvancedColorScreen 跳进来的，持续把 owner.working 推回预览，
+        // 避免 SSC 主包 tick 用服务端旧 ColorComponent 覆盖玩家颜色。
+        if (this.parent instanceof net.onixary.shapeShifterCurseFabric.ssc_addon.client.colorpicker.AdvancedColorScreen owner) {
+            var working = owner.getWorkingForPreview();
+            if (working != null) {
+                net.onixary.shapeShifterCurseFabric.ssc_addon.client.colorpicker.AdvancedColorBridge.applyPreview(working);
+            }
+        }
+    }
+
+    @Override
+    public void removed() {
+        flushSlotsIfDirty();
+        super.removed();
     }
 
     private void doApply(int idx) {
@@ -237,11 +276,15 @@ public class PalettePresetsScreen extends Screen {
         PaletteCodec.PaletteData data;
         try { data = PaletteCodec.decode(slot.code); }
         catch (PaletteCodec.DecodeException e) { setStatus("text.ssc_addon.palette.status.invalid_code"); return; }
-        PaletteConfigSync.apply(data);
-        // 同步更新上层 AdvancedColorScreen 的 working，避免本屏 tick 推 owner.working 时反扣回旧色
+        // 若从颜色编辑器跳进来：仅推预览到编辑器 working，由编辑器「保存」最终提交；
+        // 否则用户在编辑器里点「取消」时无法回滚已写盘的配置 + 已广播的服务端状态。
         if (this.parent instanceof net.onixary.shapeShifterCurseFabric.ssc_addon.client.colorpicker.AdvancedColorScreen owner) {
             owner.applyPaletteData(data);
+            setStatus("text.ssc_addon.palette.status.apply_preview", idx + 1);
+            return;
         }
+        // 独立打开（无编辑器父屏）：保持原有「直接落盘 + 广播」语义
+        PaletteConfigSync.apply(data);
         p.networkHandler.sendChatCommand("ssc_addon palette apply " + slot.code);
         setStatus("text.ssc_addon.palette.status.apply_sent", idx + 1);
     }
@@ -334,19 +377,6 @@ public class PalettePresetsScreen extends Screen {
 
     @Override
     public void close() { MinecraftClient.getInstance().setScreen(parent); }
-
-    // 预设屏驻留期间，如果是从 AdvancedColorScreen 跳进来的，持续把 owner.working 推回预览，
-    // 避免 SSC 主包 tick 用服务端旧 ColorComponent 覆盖玩家颜色。
-    @Override
-    public void tick() {
-        super.tick();
-        if (this.parent instanceof net.onixary.shapeShifterCurseFabric.ssc_addon.client.colorpicker.AdvancedColorScreen owner) {
-            var working = owner.getWorkingForPreview();
-            if (working != null) {
-                net.onixary.shapeShifterCurseFabric.ssc_addon.client.colorpicker.AdvancedColorBridge.applyPreview(working);
-            }
-        }
-    }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {

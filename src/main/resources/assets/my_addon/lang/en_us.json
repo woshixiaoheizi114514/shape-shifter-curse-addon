@@ -542,5 +542,6 @@
     "power.my_addon.form_bat_desmodus_mist_form.name":  "Mist Form",
     "power.my_addon.form_bat_desmodus_mist_form.description":  "Dissolve into a cloud of mist, your model fading away. While in mist, you are immune to all damage except the void, lasting about 4.5 seconds. After 1 second in mist, press the active skill key again to charge a Burst, dealing 6 damage and knockback to enemies within 4 blocks. Cooldown 10 seconds.",
     "effect.ssc_addon.mist_form":  "Mist Form",
-    "message.ssc_addon.evolution_stone.target_not_found":  "Error: Target form not found! ID: %s"
+    "message.ssc_addon.evolution_stone.target_not_found":  "Error: Target form not found! ID: %s",
+    "text.ssc_addon.palette.status.apply_preview":  "Previewing preset %s — click Save in the color editor to commit"
 }
