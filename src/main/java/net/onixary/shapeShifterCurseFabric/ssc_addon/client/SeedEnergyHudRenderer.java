@@ -27,8 +27,8 @@ import net.onixary.shapeShifterCurseFabric.util.UIPositionUtils;
 @Environment(EnvType.CLIENT)
 public final class SeedEnergyHudRenderer implements HudRenderCallback {
     private static final MinecraftClient MC = MinecraftClient.getInstance();
-    private static final Identifier TEX_EMPTY = new Identifier("my_addon", "textures/hud/seed_energy_empty.png");
-    private static final Identifier TEX_FULL = new Identifier("my_addon", "textures/hud/seed_energy_full.png");
+    private static final Identifier TEX_EMPTY = new Identifier("my_addon", "textures/gui/bat_parasitic_fruit_seed_bar_empty.png");
+    private static final Identifier TEX_FULL = new Identifier("my_addon", "textures/gui/bat_parasitic_fruit_seed_bar_full.png");
     /** 原图尺寸：86 像素宽 × 5 像素高，10 个圆点等距分布。 */
     private static final int TEX_WIDTH = 86;
     private static final int TEX_HEIGHT = 5;
