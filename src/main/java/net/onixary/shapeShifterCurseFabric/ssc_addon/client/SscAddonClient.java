@@ -95,6 +95,9 @@ public class SscAddonClient implements ClientModInitializer {
 				net.onixary.shapeShifterCurseFabric.config.PlayerCustomConfig cfg =
 						net.onixary.shapeShifterCurseFabric.ShapeShifterCurseFabric.playerCustomConfig;
 				net.minecraft.network.PacketByteBuf cbuf = net.fabricmc.fabric.api.networking.v1.PacketByteBufs.create();
+				// 主包 onUpdatePlayerCustomColor 首位读的是 extraData boolean，
+				// 漏写这一字节会导致服务端读越界、玩家被踢。
+				cbuf.writeBoolean(false);
 				cbuf.writeInt(net.onixary.shapeShifterCurseFabric.util.FormTextureUtils.ARGB2ABGR(cfg.primaryColor));
 				cbuf.writeInt(net.onixary.shapeShifterCurseFabric.util.FormTextureUtils.ARGB2ABGR(cfg.accentColor1Color));
 				cbuf.writeInt(net.onixary.shapeShifterCurseFabric.util.FormTextureUtils.ARGB2ABGR(cfg.accentColor2Color));

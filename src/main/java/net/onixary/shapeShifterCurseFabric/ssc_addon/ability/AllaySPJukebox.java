@@ -1,6 +1,8 @@
 package net.onixary.shapeShifterCurseFabric.ssc_addon.ability;
 
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.minecraft.entity.LivingEntity;
+
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -55,13 +57,27 @@ public class AllaySPJukebox {
     }
 
     /**
+     * 收集应当听到该唱片机音乐的玩家：持有者本人 + 追踪持有者的所有玩家（即附近能看到他的玩家）。
+     * PlayerLookup.tracking 不含玩家自己，故手动加入持有者。
+     * 修复：客机播放时其他人听不见（原先只发持有者）——改为向附近玩家范围广播，主客机一致。
+     */
+    private static java.util.Set<ServerPlayerEntity> getAudience(ServerPlayerEntity player) {
+        java.util.Set<ServerPlayerEntity> audience = new java.util.HashSet<>(PlayerLookup.tracking(player));
+        audience.add(player);
+        return audience;
+    }
+
+    /**
      * Stop all jukebox music for a player by sending StopSoundS2CPacket
      */
     public static void stopAllMusic(ServerPlayerEntity player) {
-        player.networkHandler.sendPacket(new StopSoundS2CPacket(SscAddon.ALLAY_HEAL_MUSIC_ID, SoundCategory.RECORDS));
-        player.networkHandler.sendPacket(new StopSoundS2CPacket(SscAddon.ALLAY_SPEED_MUSIC_ID, SoundCategory.RECORDS));
-        // 兜底：客机端按 ID 停止偶发不生效（流式音乐 SoundInstance 注册时序问题），再停整个 RECORDS 类别确保彻底停止（#1 关不掉）
-        player.networkHandler.sendPacket(new StopSoundS2CPacket((Identifier) null, SoundCategory.RECORDS));
+        // 向持有者 + 附近所有玩家发停止包，保证范围广播的音乐对所有听众都能停下（主客机一致）
+        for (ServerPlayerEntity audience : getAudience(player)) {
+            audience.networkHandler.sendPacket(new StopSoundS2CPacket(SscAddon.ALLAY_HEAL_MUSIC_ID, SoundCategory.RECORDS));
+            audience.networkHandler.sendPacket(new StopSoundS2CPacket(SscAddon.ALLAY_SPEED_MUSIC_ID, SoundCategory.RECORDS));
+            // 兜底：客机端按 ID 停止偶发不生效（流式音乐 SoundInstance 注册时序问题），再停整个 RECORDS 类别确保彻底停止（#1 关不掉）
+            audience.networkHandler.sendPacket(new StopSoundS2CPacket((Identifier) null, SoundCategory.RECORDS));
+        }
         playerMusicState.put(player.getUuid(), -1);
     }
 
@@ -69,21 +85,23 @@ public class AllaySPJukebox {
      * Stop old music and immediately play the new mode's music from the beginning
      */
     private static void switchMusic(ServerPlayerEntity player, int newMode) {
-        // Stop both old sounds first
-        player.networkHandler.sendPacket(new StopSoundS2CPacket(SscAddon.ALLAY_HEAL_MUSIC_ID, SoundCategory.RECORDS));
-        player.networkHandler.sendPacket(new StopSoundS2CPacket(SscAddon.ALLAY_SPEED_MUSIC_ID, SoundCategory.RECORDS));
-        // 兜底停整个 RECORDS 类别：确保客机切换模式时旧音乐彻底停止、不与新音乐重叠（#1）
-        player.networkHandler.sendPacket(new StopSoundS2CPacket((Identifier) null, SoundCategory.RECORDS));
-
-        // 只发给当前玩家，避免多人环境下每个悦灵唱片机都向全场广播导致音乐叠加且无法停止。
         SoundEvent newSound = (newMode == AllayJukeboxItem.MODE_SPEED) ? SscAddon.ALLAY_SPEED_MUSIC_EVENT : SscAddon.ALLAY_HEAL_MUSIC_EVENT;
         RegistryEntry<SoundEvent> entry = Registries.SOUND_EVENT.getEntry(newSound);
-        // 音量砍到原来的 30%（0.2 → 0.06）：悦灵唱片机音乐不再过吵（#1 音量调整）
-        player.networkHandler.sendPacket(new PlaySoundS2CPacket(entry, SoundCategory.RECORDS,
-                player.getX(), player.getY(), player.getZ(), 0.06f, 1.0f, player.getRandom().nextLong()));
+        // 所有听众用同一随机种子，保证范围内玩家听到的音乐起播一致
+        long seed = player.getRandom().nextLong();
+        // 向持有者 + 附近所有玩家广播：先停旧音乐（含 RECORDS 兜底防叠加/关不掉 #1），再以持有者位置播放新音乐（带距离衰减）
+        for (ServerPlayerEntity audience : getAudience(player)) {
+            audience.networkHandler.sendPacket(new StopSoundS2CPacket(SscAddon.ALLAY_HEAL_MUSIC_ID, SoundCategory.RECORDS));
+            audience.networkHandler.sendPacket(new StopSoundS2CPacket(SscAddon.ALLAY_SPEED_MUSIC_ID, SoundCategory.RECORDS));
+            audience.networkHandler.sendPacket(new StopSoundS2CPacket((Identifier) null, SoundCategory.RECORDS));
+            // 音量 0.06（原 0.2 的 30%，#1 音量调整）；以持有者坐标为声源，客户端按距离衰减
+            audience.networkHandler.sendPacket(new PlaySoundS2CPacket(entry, SoundCategory.RECORDS,
+                    player.getX(), player.getY(), player.getZ(), 0.06f, 1.0f, seed));
+        }
 
         playerMusicState.put(player.getUuid(), newMode);
     }
+
 
     /**
      * Called every tick for each allay_sp player from the server tick event
