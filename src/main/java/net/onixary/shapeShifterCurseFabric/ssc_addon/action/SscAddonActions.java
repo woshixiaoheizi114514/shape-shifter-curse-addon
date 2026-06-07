@@ -540,6 +540,39 @@ public class SscAddonActions {
 						GoldenSandstormCounterBurst.execute(sp);
 					}
 				}));
+
+		// ==== 旋转圆环粒子（附属专用，仅 red 火环外圈使用，不影响主模组 spawn_particles_in_circle） ====
+		registerEntity(SpawnRotatingCircleAction.getFactory());
+
+		// ==== 向前喷射粒子（附属专用，仅 red 吐火使用，不影响共享的 fire_breath） ====
+		registerEntity(SpawnForwardBurstAction.getFactory());
+
+		// ==== red 狐火火球：发射火球投射物 + 近身 60°×4格 锥形霰击（5 魔法伤害，附属专用，只作用 red） ====
+		registerEntity(new ActionFactory<>(new Identifier("my_addon", "fox_fireball"),
+				new SerializableData(),
+				(data, entity) -> {
+					if (!(entity instanceof ServerPlayerEntity player)) return;
+					if (!(player.getWorld() instanceof ServerWorld world)) return;
+					Vec3d look = player.getRotationVec(1.0F);
+					// 发射火球投射物
+					net.onixary.shapeShifterCurseFabric.ssc_addon.entity.FoxFireballEntity ball =
+							new net.onixary.shapeShifterCurseFabric.ssc_addon.entity.FoxFireballEntity(world, player);
+					ball.setDirection(look);
+					world.spawnEntity(ball);
+					// 近身 60°、4 格锥形霰击：5 点魔法伤害，跳过白名单
+					Vec3d eye = player.getEyePos();
+					RegistryKey<DamageType> magicKey = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, new Identifier("minecraft", "magic"));
+					Box box = player.getBoundingBox().expand(4.0);
+					world.getEntitiesByClass(LivingEntity.class, box,
+							e -> e != player && e.isAlive() && !e.isSpectator()).forEach(t -> {
+						if (WhitelistUtils.isProtected(player, t)) return;
+						Vec3d toT = t.getPos().add(0, t.getHeight() / 2.0, 0).subtract(eye).normalize();
+						double dot = look.dotProduct(toT);
+						if (dot > 0.5 && player.squaredDistanceTo(t) < 16.0) {
+							t.damage(t.getDamageSources().create(magicKey, player, player), 5.0f);
+						}
+					});
+				}));
 	}
 
 	private static void registerBiEntity(ActionFactory<Pair<Entity, Entity>> actionFactory) {

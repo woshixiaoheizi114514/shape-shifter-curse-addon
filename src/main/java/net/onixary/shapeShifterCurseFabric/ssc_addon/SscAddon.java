@@ -115,6 +115,15 @@ public class SscAddon implements ModInitializer {
 					.trackRangeBlocks(64).trackedUpdateRate(10)
 					.build()
 	);
+	// red 狐火火球投射物
+	public static final EntityType<net.onixary.shapeShifterCurseFabric.ssc_addon.entity.FoxFireballEntity> FOX_FIREBALL_ENTITY = Registry.register(
+			Registries.ENTITY_TYPE,
+			new Identifier("ssc_addon", "fox_fireball"),
+			FabricEntityTypeBuilder.<net.onixary.shapeShifterCurseFabric.ssc_addon.entity.FoxFireballEntity>create(SpawnGroup.MISC, net.onixary.shapeShifterCurseFabric.ssc_addon.entity.FoxFireballEntity::new)
+					.dimensions(EntityDimensions.fixed(0.25f, 0.25f))
+					.trackRangeBlocks(64).trackedUpdateRate(2)
+					.build()
+	);
 	// 寄生果蝠「感染孢子炸弹」投掷物
 	public static final EntityType<InfectionSporeBombEntity> INFECTION_SPORE_BOMB_ENTITY = Registry.register(
 			Registries.ENTITY_TYPE,

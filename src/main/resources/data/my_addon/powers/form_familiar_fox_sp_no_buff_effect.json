@@ -27,6 +27,7 @@
     "ssc_addon:fox_fire_burn",
     "ssc_addon:frost_freeze",
     "ssc_addon:frost_fall",
-    "ssc_addon:sand_blind"
+    "ssc_addon:sand_blind",
+    "ssc_addon:deafen"
   ]
 }
