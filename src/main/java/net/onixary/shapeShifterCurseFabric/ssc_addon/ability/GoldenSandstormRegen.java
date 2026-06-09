@@ -72,6 +72,11 @@ public final class GoldenSandstormRegen {
 
 	/** 检查玩家是否处于战斗状态 */
 	public static boolean isInCombat(ServerPlayerEntity player) {
+		// 同步果蝠交战判定（造成/受到伤害 10s 内、或来源仍在 10 格内）；
+		// 同时保留金沙岚自身的 markCombat 标记（覆盖冥狼为主人标记、凋零源等果蝠事件不涵盖的特殊来源）。
+		if (net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticCombatTracker.isInCombat(player)) {
+			return true;
+		}
 		Long last = LAST_COMBAT_TICK.get(player.getUuid());
 		if (last == null) return false;
 		return player.getWorld().getTime() - last <= COMBAT_DURATION;
