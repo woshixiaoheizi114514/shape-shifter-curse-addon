@@ -4,6 +4,8 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectCategory;
 import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.server.world.ServerWorld;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.InfectionSporeManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +42,12 @@ public class PurifiedEffect extends StatusEffect {
 			// Remove the effect
 			// Note: removeStatusEffect returns boolean, doesn't throw concurrent modification if we iterate over a copy
 			entity.removeStatusEffect(instance.getEffectType());
+		}
+
+		// 净化同样清除“感染孢子”（由自定义管理器维护，非原版状态效果），并驱散身边的滞留毒雾云
+		if (entity.getWorld() instanceof ServerWorld sw) {
+			InfectionSporeManager.cureInfection(entity.getUuid());
+			InfectionSporeManager.dissipateCloudsNear(sw, entity.getPos(), InfectionSporeManager.CLOUD_PURIFY_REACH);
 		}
 	}
 }

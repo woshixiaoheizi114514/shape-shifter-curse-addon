@@ -9,8 +9,8 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
+import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.MinecraftServer;
@@ -20,12 +20,14 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.WhitelistUtils;
+import org.joml.Vector3f;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * 寄生果蝠次要技能：感染孢子状态管理器。
@@ -34,19 +36,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * 保证主客机一致与无客机延迟。
  * <p>
  * 行为：
- * - 感染目标每 3 秒（60t）受到 1 点直接伤害，并被发光（高亮）1 秒（20t）。
+ * - 感染目标每 25t（1.25s，与中毒 I 一致）受到 1 点直接伤害。
  * - 感染目标 1.5 格内的未感染、非白名单生物会被传染，剩余时间继承施加者剩余时间。
  * - 已感染目标再次被命中时忽略（不刷新、不叠加）。
  * - 感染期间粒子表现：他人视角每 5t 一次绿色感染粒子；被感染玩家自己视角 1/4 频率。
  */
 public final class InfectionSporeManager {
 
-    /** 单次伤害量 */
-    public static final float TICK_DAMAGE = 1.0f;
-    /** 伤害触发间隔（tick） */
-    public static final int DAMAGE_INTERVAL = 60;
-    /** 高亮持续 ticks */
-    public static final int GLOW_DURATION = 20;
+    /** 伤害触发间隔（tick）：与中毒 I 一致，每 25t（1.25s）一次 */
+    public static final int DAMAGE_INTERVAL = 25;
     /** 传染半径（格） */
     public static final double INFECT_SPREAD_RADIUS = 1.5;
     /** 他人视角粒子周期 */
@@ -76,6 +74,9 @@ public final class InfectionSporeManager {
     public static void infect(ServerPlayerEntity caster, LivingEntity target, int durationTicks) {
         if (!(target.getWorld() instanceof ServerWorld serverWorld)) return;
         if (target == caster) return;
+        // 施加专属「中毒」buff（图标 + 周期扣血，效果同中毒；扣血由 buff 负责，本管理器不再直接伤害）
+        target.addStatusEffect(new StatusEffectInstance(
+                net.onixary.shapeShifterCurseFabric.ssc_addon.SscAddon.BAT_POISON, Math.max(20, durationTicks), 0, false, true, true));
         UUID targetUuid = target.getUuid();
         long now = serverWorld.getTime();
         long newEnd = now + Math.max(20, durationTicks);
@@ -126,6 +127,9 @@ public final class InfectionSporeManager {
         if (!HEAL_ENTRIES.isEmpty()) {
             tickHeals(world);
         }
+        if (!CLOUDS.isEmpty()) {
+            tickClouds(world);
+        }
         if (ENTRIES.isEmpty()) return;
         long now = world.getTime();
         MinecraftServer server = world.getServer();
@@ -147,12 +151,7 @@ public final class InfectionSporeManager {
                 continue;
             }
 
-            // 1) 周期伤害 + 高亮
-            if (now >= data.nextDamageTick) {
-                data.nextDamageTick = now + DAMAGE_INTERVAL;
-                target.damage(target.getDamageSources().magic(), TICK_DAMAGE);
-                target.addStatusEffect(new StatusEffectInstance(StatusEffects.GLOWING, GLOW_DURATION, 0, true, false, false));
-            }
+            // 1) 周期扣血由 BAT_POISON buff 负责（见 infect/spreadFrom），此处不再直接伤害
 
             // 2) 传染（仅当源施加者仍在线时启用，便于继承"剩余时间"语义）
             spreadFrom(server, target, data, now);
@@ -186,6 +185,8 @@ public final class InfectionSporeManager {
                     now + DAMAGE_INTERVAL
             );
             ENTRIES.put(candidate.getUuid(), child);
+            candidate.addStatusEffect(new StatusEffectInstance(
+                    net.onixary.shapeShifterCurseFabric.ssc_addon.SscAddon.BAT_POISON, Math.max(20, remaining), 0, false, true, true));
         }
     }
 
@@ -271,6 +272,134 @@ public final class InfectionSporeManager {
             this.worldKey = worldKey;
             this.endTick = endTick;
             this.nextHealTick = nextHealTick;
+        }
+    }
+
+    // ============================ 滞留毒雾云子系统 ============================
+    /** 毒雾云半径（格）：直径 4 格 → 半径 2 格 */
+    public static final double CLOUD_RADIUS = 2.0;
+    /** 毒雾云扫描生物的间隔（tick） */
+    public static final int CLOUD_SCAN_INTERVAL = 5;
+    /** 毒雾云粒子间隔（tick） */
+    public static final int CLOUD_PARTICLE_INTERVAL = 2;
+    /** 净化驱散毒雾云的判定半径（格）：被净化个体此范围内的云会被驱散 */
+    public static final double CLOUD_PURIFY_REACH = 8.0;
+    /** 墨绿色中毒粒子（与感染孢子弹视觉一致） */
+    private static final DustParticleEffect CLOUD_POISON_DUST = new DustParticleEffect(new Vector3f(0.30f, 0.50f, 0.10f), 1.2f);
+    /** 活跃的毒雾云列表（服务端权威） */
+    private static final List<CloudData> CLOUDS = new CopyOnWriteArrayList<>();
+
+    /**
+     * 在指定位置生成一团滞留毒雾云（感染孢子弹落地时调用）。
+     *
+     * @param caster        施放者（用于白名单判定与感染归属）
+     * @param world         服务端世界
+     * @param center        云中心（落点）
+     * @param radius        云半径（格）
+     * @param durationTicks 云存活时长（tick），同时也是进入者可获得的最大感染时长
+     */
+    public static void spawnCloud(ServerPlayerEntity caster, ServerWorld world, Vec3d center, double radius, int durationTicks) {
+        long now = world.getTime();
+        CLOUDS.add(new CloudData(
+                caster.getUuid(),
+                world.getRegistryKey(),
+                center.x, center.y, center.z,
+                radius,
+                now + Math.max(20, durationTicks),
+                now + CLOUD_SCAN_INTERVAL
+        ));
+    }
+
+    /** 移除目标身上的感染（供悦灵净化调用）。 */
+    public static void cureInfection(UUID uuid) {
+        ENTRIES.remove(uuid);
+    }
+
+    /** 驱散给定位置 reach 范围内、同维度的所有毒雾云（供悦灵净化调用）。 */
+    public static void dissipateCloudsNear(ServerWorld world, Vec3d pos, double reach) {
+        if (CLOUDS.isEmpty()) return;
+        RegistryKey<World> key = world.getRegistryKey();
+        double sq = reach * reach;
+        CLOUDS.removeIf(c -> c.worldKey.equals(key) && c.squaredDistanceTo(pos.x, pos.y, pos.z) <= sq);
+    }
+
+    private static void tickClouds(ServerWorld world) {
+        long now = world.getTime();
+        MinecraftServer server = world.getServer();
+        for (CloudData cloud : CLOUDS) {
+            if (!cloud.worldKey.equals(world.getRegistryKey())) continue;
+            if (now >= cloud.endTick) {
+                CLOUDS.remove(cloud);
+                continue;
+            }
+            // 1) 粒子表现（服务端广播，多人一致）
+            if (now % CLOUD_PARTICLE_INTERVAL == 0) {
+                emitCloudParticles(world, cloud);
+            }
+            // 2) 周期扫描：感染敌人 / 治疗友方
+            if (now >= cloud.nextScanTick) {
+                cloud.nextScanTick = now + CLOUD_SCAN_INTERVAL;
+                ServerPlayerEntity caster = server.getPlayerManager().getPlayer(cloud.casterUuid);
+                if (caster == null) continue; // 施放者掉线则仅留粒子，不感染（需其白名单判定）
+                int remaining = (int) Math.max(20, cloud.endTick - now);
+                Box box = new Box(
+                        cloud.x - cloud.radius, cloud.y - cloud.radius, cloud.z - cloud.radius,
+                        cloud.x + cloud.radius, cloud.y + cloud.radius, cloud.z + cloud.radius);
+                double sqRadius = cloud.radius * cloud.radius;
+                List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class, box,
+                        e -> e.isAlive() && e != caster
+                                && cloud.squaredDistanceTo(e.getX(), e.getY(), e.getZ()) <= sqRadius);
+                for (LivingEntity target : targets) {
+                    if (WhitelistUtils.isProtected(caster, target)) {
+                        // 友方：站进云中获得治疗孢子，时长继承云剩余寿命
+                        applyFriendHeal(caster, target, remaining);
+                    } else if (!ENTRIES.containsKey(target.getUuid())) {
+                        // 敌人：仅当尚未感染时施加，已感染者不再重复获得（不刷新）
+                        infect(caster, target, remaining);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void emitCloudParticles(ServerWorld world, CloudData cloud) {
+        // 主体毒雾：贴地铺开的墨绿色中毒粒子
+        world.spawnParticles(CLOUD_POISON_DUST,
+                cloud.x, cloud.y + 0.5, cloud.z,
+                8, cloud.radius * 0.6, 0.45, cloud.radius * 0.6, 0.0);
+        // 低频飘散的孢子，增强"雾"的体积感
+        world.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR,
+                cloud.x, cloud.y + 0.3, cloud.z,
+                2, cloud.radius * 0.5, 0.3, cloud.radius * 0.5, 0.0);
+    }
+
+    private static final class CloudData {
+        final UUID casterUuid;
+        final RegistryKey<World> worldKey;
+        final double x;
+        final double y;
+        final double z;
+        final double radius;
+        final long endTick;
+        long nextScanTick;
+
+        CloudData(UUID casterUuid, RegistryKey<World> worldKey, double x, double y, double z,
+                  double radius, long endTick, long nextScanTick) {
+            this.casterUuid = casterUuid;
+            this.worldKey = worldKey;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.radius = radius;
+            this.endTick = endTick;
+            this.nextScanTick = nextScanTick;
+        }
+
+        double squaredDistanceTo(double ox, double oy, double oz) {
+            double dx = x - ox;
+            double dy = y - oy;
+            double dz = z - oz;
+            return dx * dx + dy * dy + dz * dz;
         }
     }
 }

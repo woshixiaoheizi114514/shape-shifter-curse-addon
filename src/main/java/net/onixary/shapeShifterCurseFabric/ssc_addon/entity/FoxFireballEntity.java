@@ -10,6 +10,7 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
+import net.minecraft.particle.DustColorTransitionParticleEffect;
 import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
@@ -146,13 +147,11 @@ public class FoxFireballEntity extends ProjectileEntity implements net.minecraft
         }
         spawnTrail(sw);
 
-        // 12 格后最多再飞 3 秒（达 18 格），未命中则泡泡裂开消散
+        // 12 格后最多再飞 3 秒（达 18 格），未命中则原地触发一次爆炸后消失
         if (distanceTraveled >= ARM_DISTANCE) {
             phase2Tick++;
             if (phase2Tick >= PHASE2_DURATION) {
-                spawnPopAnimation(sw);
-                exploding = true;                 // 进入等待火环播完状态
-                if (activeRings.isEmpty()) this.discard();
+                explode(sw, null);   // 未命中飞到射程上限：原地触发一次爆炸（无连锁）后消失
                 return;
             }
         }
@@ -302,6 +301,16 @@ public class FoxFireballEntity extends ProjectileEntity implements net.minecraft
             Vec3d p = randomInSphere(EXPLODE_RADIUS * 0.6, rnd);
             w.spawnParticles(ParticleTypes.LAVA, x + p.x, y + p.y + 1.0, z + p.z, 1, 0, 0, 0, 0);
         }
+        // === RC4 奥术手雷爆炸特效（放大 1.5 倍版：扩散范围与 dust 尺寸 ×1.5，数量与速度不变） ===
+        w.spawnParticles(ParticleTypes.EXPLOSION, x, y + 0.3, z, 3, 0.3, 0.3, 0.3, 1.0);
+        w.spawnParticles(ParticleTypes.LAVA, x, y + 0.8, z, 20, 0.45, 0.45, 0.45, 0.2);
+        // 紫红→暗红渐变粉尘（dust 尺寸 1→1.5）
+        DustColorTransitionParticleEffect arcaneDust = new DustColorTransitionParticleEffect(
+                new Vector3f(0.322f, 0.0f, 0.149f), new Vector3f(0.149f, 0.012f, 0.039f), 1.5f);
+        w.spawnParticles(arcaneDust, x, y + 0.3, z, 300, 1.05, 1.8, 1.05, 0.01);
+        w.spawnParticles(ParticleTypes.FLAME, x, y + 0.3, z, 80, 0.75, 1.2, 0.75, 0.1);
+        w.spawnParticles(ParticleTypes.SQUID_INK, x, y + 0.3, z, 5, 0.45, 0.45, 0.45, 0.1);
+        w.spawnParticles(ParticleTypes.FALLING_LAVA, x, y + 0.1, z, 125, 1.5, 0.75, 1.5, 0.2);
     }
 
     /** 腰部火环扩散动画：每帧画半径递增的环（0→CHAIN_RADIUS），仅火焰 + 灵魂火粒子（无红色粉尘）。 */
@@ -319,22 +328,6 @@ public class FoxFireballEntity extends ProjectileEntity implements net.minecraft
                 w.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, px, y + 0.05, pz, 1, 0, upward, 0, 0.01);
             }
         }
-    }
-
-    /** 8 格后未命中：泡泡裂开式消散（火焰 + 灵魂火向外四散 + 烟雾）。 */
-    private void spawnPopAnimation(ServerWorld w) {
-        double x = this.getX(), y = this.getY(), z = this.getZ();
-        Random rnd = this.random;
-        w.playSound(null, x, y, z, SoundEvents.ENTITY_GENERIC_EXTINGUISH_FIRE, SoundCategory.PLAYERS, 0.5f, 1.6f);
-        for (int i = 0; i < 26; i++) {
-            Vec3d dir = randomInSphere(1.0, rnd).normalize().multiply(0.18);
-            if (rnd.nextDouble() < 0.6) {
-                w.spawnParticles(ParticleTypes.FLAME, x, y, z, 0, dir.x, dir.y, dir.z, 0.15);
-            } else {
-                w.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, x, y, z, 0, dir.x, dir.y, dir.z, 0.15);
-            }
-        }
-        w.spawnParticles(ParticleTypes.SMOKE, x, y, z, 6, 0.2, 0.2, 0.2, 0.02);
     }
 
     private Vec3d randomInSphere(double r, Random rnd) {

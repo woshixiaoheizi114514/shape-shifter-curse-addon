@@ -21,7 +21,6 @@ import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.server.MinecraftServer;
@@ -30,8 +29,6 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.SscAddon;
@@ -41,10 +38,8 @@ import net.onixary.shapeShifterCurseFabric.ssc_addon.util.PowerUtils;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.WhitelistUtils;
 import org.joml.Vector3f;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -54,10 +49,9 @@ import java.util.UUID;
  * 全部判定与状态效果均在服务端执行，确保多人环境主客机一致。
  */
 public class ParasiticFruitSeedPower extends ActiveCooldownPower {
-    private static final double RANGE = 6.0;
     private static final int MAX_SEEDS = 3;
     private static final int ROOTING_TICKS = 20;
-    private static final int FRUIT_INTERVAL_TICKS = 40;
+    private static final int FRUIT_INTERVAL_TICKS = 25;
     private static final int DEFAULT_LIFE_TICKS = 240;
     private static final int MIN_LIFE_TICKS = 80;
     private static final float SELF_DURATION_MULTIPLIER = 0.6f;
@@ -151,44 +145,33 @@ public class ParasiticFruitSeedPower extends ActiveCooldownPower {
             return;
         }
 
-        LivingEntity target = raycastLivingTarget(caster);
-        if (target == null || !target.isAlive()) {
-            // 未命中生物时只进入半冷却，不扣能量
-            applyCooldown(Math.max(20, cooldownTicks / 2));
-            playFailFeedback(caster);
-            return;
-        }
-
+        // 改为抛物线投掷：发射灵果种子投掷物。命中生物由投掷物回调 plantSeed；未命中落地后续生成种子圈。
         PowerUtils.changeResourceValueAndSync(caster, FormIdentifiers.BAT_PARASITIC_FRUIT_SEED_ENERGY, -energyCost);
-        plantSeed(caster, target);
+        launchSeedProjectile(caster);
         if (twinPod) {
-            LivingEntity second = findNearestOther(caster, target);
-            if (second != null) {
-                plantSeed(caster, second);
-            }
+            // 双生种荚：额外再投一颗
+            launchSeedProjectile(caster);
             applyCooldown(cooldownTicks + 20);
         } else {
             applyCooldown(cooldownTicks);
         }
     }
 
-    /**
-     * 双生种荚：查找主目标附近最近的另一个可寄生生物（4 格内，排除施法者与主目标本身）。
-     */
-    private LivingEntity findNearestOther(ServerPlayerEntity caster, LivingEntity primary) {
-        Box box = primary.getBoundingBox().expand(4.0D);
-        LivingEntity best = null;
-        double bestDistSq = Double.MAX_VALUE;
-        for (LivingEntity e : caster.getWorld().getEntitiesByClass(LivingEntity.class, box,
-                living -> living.isAlive() && living != caster && living != primary)) {
-            double d = e.squaredDistanceTo(primary);
-            if (d < bestDistSq) {
-                bestDistSq = d;
-                best = e;
-            }
-        }
-        return best;
+    /** 发射一颗灵果种子投掷物（抛物线，速度同孢子炸弹）。 */
+    private void launchSeedProjectile(ServerPlayerEntity caster) {
+        net.onixary.shapeShifterCurseFabric.ssc_addon.entity.ParasiticSeedProjectile seed =
+                new net.onixary.shapeShifterCurseFabric.ssc_addon.entity.ParasiticSeedProjectile(caster.getWorld(), caster);
+        seed.setItem(net.minecraft.item.Items.WHEAT_SEEDS.getDefaultStack());
+        seed.setOwner(caster);
+        seed.setPos(caster.getX(), caster.getEyeY() - 0.1, caster.getZ());
+        seed.setVelocity(caster, caster.getPitch(), caster.getYaw(), 0.0f, 1.4f, 0.4f);
+        Vec3d ownerVel = caster.getVelocity();
+        seed.setVelocity(seed.getVelocity().add(ownerVel.x, caster.isOnGround() ? 0.0 : ownerVel.y, ownerVel.z));
+        caster.getWorld().spawnEntity(seed);
+        caster.getWorld().playSound(null, caster.getX(), caster.getY(), caster.getZ(),
+                SoundEvents.ENTITY_SNOWBALL_THROW, SoundCategory.PLAYERS, 0.6f, 1.5f);
     }
+
 
     @Override
     public void tick() {
@@ -260,31 +243,20 @@ public class ParasiticFruitSeedPower extends ActiveCooldownPower {
         }
     }
 
-    private LivingEntity raycastLivingTarget(ServerPlayerEntity caster) {
-        Vec3d eye = caster.getEyePos();
-        Vec3d look = caster.getRotationVec(1.0F).normalize();
-        Vec3d end = eye.add(look.multiply(RANGE));
-
-        // 方块阻挡检测：不可穿墙
-        net.minecraft.util.hit.BlockHitResult blockHit = caster.getWorld().raycast(
-                new net.minecraft.world.RaycastContext(eye, end,
-                        net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
-                        net.minecraft.world.RaycastContext.FluidHandling.NONE, caster));
-        Vec3d effectiveEnd = blockHit.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK ? blockHit.getPos() : end;
-        double maxDistSq = eye.squaredDistanceTo(effectiveEnd);
-
-        Box box = caster.getBoundingBox().stretch(look.multiply(RANGE)).expand(1.0D);
-        EntityHitResult hit = ProjectileUtil.raycast(caster, eye, effectiveEnd, box,
-                e -> e instanceof LivingEntity living && e != caster && living.isAlive(), maxDistSq);
-        if (hit != null && hit.getEntity() instanceof LivingEntity living) {
-            return living;
-        }
-        return null;
+    /**
+     * 在宿主身上种下灵果种子（投掷物命中 / 种子圈拾取统一入口）。
+     * public 供 ParasiticSeedProjectile 等外部回调。
+     */
+    public void plantSeed(ServerPlayerEntity caster, LivingEntity host) {
+        // 种子寿命（=叮声/buff 总持续）：未交战 15s(300t) / 交战 5s(100t)
+        plantSeed(caster, host,
+                net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticCombatTracker.isInCombat(host) ? 100 : 300);
     }
 
-    private void plantSeed(ServerPlayerEntity caster, LivingEntity host) {
+    /** 带自定义基础时长的种植（种子圈拾取传固定时长）。 */
+    public void plantSeed(ServerPlayerEntity caster, LivingEntity host, int baseLife) {
         long now = caster.getWorld().getTime();
-        int adjustedLife = getEnvironmentAdjustedLife(host, lifeTicks);
+        int adjustedLife = baseLife;
         SeedData seed = seeds.get(host.getUuid());
         if (seed != null) {
             // 同一宿主：堆叠 1 层（封顶 MAX_SEEDS=3），并重置生命期 / 未来结果时间
@@ -312,6 +284,27 @@ public class ParasiticFruitSeedPower extends ActiveCooldownPower {
                     18 + finalStack * 6, 0.25, 0.35, 0.25, 0.02);
             world.playSound(null, host.getX(), host.getY(), host.getZ(),
                     SoundEvents.BLOCK_GRASS_PLACE, SoundCategory.PLAYERS, 0.9f, 1.5f);
+        }
+    }
+
+    /**
+     * 静态回调入口：让 caster 当前持有的灵果寄生 power 在 host 身上种下种子。
+     * 供投掷物命中、种子圈拾取等外部场景调用（多人安全：仅服务端、按持有者实例分发）。
+     */
+    public static void plantSeedFrom(ServerPlayerEntity caster, LivingEntity host) {
+        if (caster == null || host == null || !host.isAlive()) return;
+        for (ParasiticFruitSeedPower power :
+                io.github.apace100.apoli.component.PowerHolderComponent.getPowers(caster, ParasiticFruitSeedPower.class)) {
+            power.plantSeed(caster, host);
+        }
+    }
+
+    /** 带自定义时长的静态回调（种子圈拾取用，时长 = 剩余）。 */
+    public static void plantSeedFrom(ServerPlayerEntity caster, LivingEntity host, int baseLife) {
+        if (caster == null || host == null || !host.isAlive()) return;
+        for (ParasiticFruitSeedPower power :
+                io.github.apace100.apoli.component.PowerHolderComponent.getPowers(caster, ParasiticFruitSeedPower.class)) {
+            power.plantSeed(caster, host, baseLife);
         }
     }
 
@@ -348,9 +341,8 @@ public class ParasiticFruitSeedPower extends ActiveCooldownPower {
                 .orElse(false);
         if (friend) {
             this.currentHumusFactor = humus ? 0.7f : 1.0f;
-            FriendFruit fruit = selectFriendFruit(host);
-            applyFriendFruit(host, fruit, host == caster, seed.stack);
-            seed.lastFruitName = fruit.name();
+            applyFriendBuff(host, host == caster, seed.stack);
+            seed.lastFruitName = "friend_buff";
             spawnFruitParticles(host, FRIEND_DUST, seed.stack);
         } else if (!WhitelistUtils.isProtected(caster, host)) {
             this.currentHumusFactor = humus ? 1.5f : 1.0f;
@@ -360,19 +352,6 @@ public class ParasiticFruitSeedPower extends ActiveCooldownPower {
             spawnFruitParticles(host, ENEMY_DUST, seed.stack);
         }
         this.currentHumusFactor = 1.0f;
-    }
-
-    private FriendFruit selectFriendFruit(LivingEntity host) {
-        if (host.getHealth() / host.getMaxHealth() < 0.4f) {
-            return FriendFruit.HONEYDEW;
-        }
-        if (host.hurtTime > 0 || (host instanceof MobEntity mob && mob.getTarget() != null)) {
-            return FriendFruit.PRICKLY_PEAR;
-        }
-        if (host.isSprinting() || !host.isOnGround() || host.getVelocity().horizontalLengthSquared() > 0.05) {
-            return FriendFruit.WIND_BERRY;
-        }
-        return FriendFruit.FRAGRANT;
     }
 
     private EnemyFruit selectEnemyFruit(LivingEntity host) {
@@ -388,45 +367,49 @@ public class ParasiticFruitSeedPower extends ActiveCooldownPower {
         return EnemyFruit.SOUR;
     }
 
-    private void applyFriendFruit(LivingEntity target, FriendFruit fruit, boolean self) {
-        applyFriendFruit(target, fruit, self, 1, 1);
-    }
-
-    private void applyFriendFruit(LivingEntity target, FriendFruit fruit, boolean self, int stack) {
-        applyFriendFruit(target, fruit, self, 1, stack);
-    }
-
-    private void applyFriendFruit(LivingEntity target, FriendFruit fruit, boolean self, int divisor, int stack) {
-        float selfMultiplier = self ? SELF_DURATION_MULTIPLIER : 1.0f;
-        // amplifier = stack-1（0~2），堆叠越高状态效果越强
-        int amp = MathHelper.clamp(stack - 1, 0, 2);
-        switch (fruit) {
-            case HONEYDEW -> {
-                addEffect(target, StatusEffects.REGENERATION, scaleDuration(60, divisor, selfMultiplier), amp);
-                addEffect(target, StatusEffects.ABSORPTION, scaleDuration(100, divisor, selfMultiplier), amp);
-                removeOneNegativeEffect(target);
-            }
-            case PRICKLY_PEAR -> {
-                addEffect(target, StatusEffects.RESISTANCE, scaleDuration(80, divisor, selfMultiplier), amp);
-                addEffect(target, StatusEffects.STRENGTH, scaleDuration(80, divisor, selfMultiplier), amp);
-            }
-            case WIND_BERRY -> {
-                addEffect(target, StatusEffects.SPEED, scaleDuration(100, divisor, selfMultiplier), amp);
-                addEffect(target, StatusEffects.SLOW_FALLING, scaleDuration(80, divisor, selfMultiplier), 0);
-            }
-            case FRAGRANT -> {
-                addEffect(target, StatusEffects.HASTE, scaleDuration(60, divisor, selfMultiplier), amp);
-                target.heal((divisor == 1 ? 1.0f : 0.5f) * stack);
-            }
-        }
-    }
-
     private void applyEnemyFruit(LivingEntity target, EnemyFruit fruit) {
         applyEnemyFruit(target, fruit, 1, 1);
     }
 
     private void applyEnemyFruit(LivingEntity target, EnemyFruit fruit, int stack) {
         applyEnemyFruit(target, fruit, 1, stack);
+    }
+
+    /** 友方果实效果重写：交战/未交战 × 血量分级（替代旧 selectFriendFruit/applyFriendFruit）。 */
+    private void applyFriendBuff(LivingEntity target, boolean self, int stack) {
+        boolean inCombat = net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticCombatTracker.isInCombat(target);
+        float hpRatio = target.getHealth() / Math.max(1.0f, target.getMaxHealth());
+        // buff 时长 = 叮声间隔 + 0.2s = 44t（每次结果刷新，总持续 = 种子寿命）
+        int buffDur = FRUIT_INTERVAL_TICKS + 4;
+        if (!inCombat) {
+            if (hpRatio > 0.7f) {
+                // 未交战 + 高血：急迫 I
+                addEffect(target, StatusEffects.HASTE, buffDur, 0);
+            } else {
+                // 未交战 + 低血：回血 1 心
+                healWithFx(target, 1);
+            }
+        } else {
+            if (hpRatio > 0.8f) {
+                // 交战 + 高血：迅捷 II
+                addEffect(target, StatusEffects.SPEED, buffDur, 1);
+            } else if (hpRatio >= 0.5f) {
+                // 交战 + 中血：伤害吸收 I（自定义累加黄心）+ 生命恢复（1 心）
+                net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticAbsorptionManager.addAbsorption(target, 0);
+                healWithFx(target, 1);
+            } else {
+                // 交战 + 低血：伤害吸收 II（自定义累加黄心）+ 生命恢复（2 心）
+                net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticAbsorptionManager.addAbsorption(target, 1);
+                healWithFx(target, 2);
+            }
+        }
+    }
+
+    /** 立即回血（触发血条回血动画）+ 生命恢复图标显示。TODO: 后续改为专属独立「生命恢复」buff（只回一次）。 */
+    private void healWithFx(LivingEntity target, int hearts) {
+        target.heal(hearts * 2.0f);
+        // 专属「生命恢复」buff：立即回血由上面 heal 完成（血条动画），此 buff 仅显示图标、不周期回血（只回一次）
+        addEffect(target, SscAddon.BAT_REGEN, 60, hearts - 1);
     }
 
     private void applyEnemyFruit(LivingEntity target, EnemyFruit fruit, int divisor, int stack) {
@@ -467,24 +450,8 @@ public class ParasiticFruitSeedPower extends ActiveCooldownPower {
     private int scaleDuration(int duration, int divisor, float multiplier) {
         // 腐殖之戒：敌方果时长 +50% / 友方果时长 -30%（由 bearFruit 在调用前设置本系数）
         float total = multiplier * currentHumusFactor;
-        return Math.max(10, Math.round(duration * total / Math.max(1, divisor)));
-    }
-
-    private void removeOneNegativeEffect(LivingEntity target) {
-        List<StatusEffect> removable = new ArrayList<>();
-        removable.add(StatusEffects.POISON);
-        removable.add(StatusEffects.WITHER);
-        removable.add(StatusEffects.SLOWNESS);
-        removable.add(StatusEffects.WEAKNESS);
-        removable.add(StatusEffects.HUNGER);
-        removable.add(StatusEffects.NAUSEA);
-        removable.add(StatusEffects.BLINDNESS);
-        for (StatusEffect effect : removable) {
-            if (target.hasStatusEffect(effect)) {
-                target.removeStatusEffect(effect);
-                return;
-            }
-        }
+        // 每次触发的药水效果统一额外延长 0.3 秒（+6 tick）
+        return Math.max(10, Math.round(duration * total / Math.max(1, divisor)) + 6);
     }
 
     private LivingEntity findLiving(MinecraftServer server, UUID uuid) {
@@ -538,13 +505,6 @@ public class ParasiticFruitSeedPower extends ActiveCooldownPower {
         ServerWorld world = caster.getServerWorld();
         world.playSound(null, caster.getX(), caster.getY(), caster.getZ(),
                 SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.PLAYERS, 0.4f, 1.7f);
-    }
-
-    private enum FriendFruit {
-        HONEYDEW,
-        PRICKLY_PEAR,
-        WIND_BERRY,
-        FRAGRANT
     }
 
     private enum EnemyFruit {

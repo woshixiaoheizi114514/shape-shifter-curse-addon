@@ -93,6 +93,9 @@ public class SscAddon implements ModInitializer {
 	public static final StatusEffect FROST_FREEZE = new FrostFreezeEffect();
 	public static final StatusEffect FROST_FALL = new FrostFallEffect();
 	public static final StatusEffect PURIFIED = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.PurifiedEffect();
+	public static final StatusEffect BAT_REGEN = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.BatRegenEffect();
+	public static final StatusEffect BAT_POISON = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.BatPoisonEffect();
+	public static final StatusEffect BAT_ABSORPTION = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.BatAbsorptionEffect();
 	// 幽雾化形 - 雾化状态标记效果
 	public static final StatusEffect MIST_FORM = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.MistFormEffect();
 	// 幽雾化形 - 凝聚爆破蓄力标记效果（客户端据此减速 50%）
@@ -132,7 +135,17 @@ public class SscAddon implements ModInitializer {
 					.dimensions(EntityDimensions.fixed(0.25f, 0.25f))
 					.trackRangeBlocks(64).trackedUpdateRate(10)
 					.build()
-	);	public static final ScreenHandlerType<PotionBagScreenHandler> POTION_BAG_SCREEN_HANDLER = new ScreenHandlerType<>(PotionBagScreenHandler::new, FeatureSet.empty());
+	);
+	// 寄生果蝠主技能「灵果寄生」投掷物
+	public static final EntityType<net.onixary.shapeShifterCurseFabric.ssc_addon.entity.ParasiticSeedProjectile> PARASITIC_SEED_ENTITY = Registry.register(
+			Registries.ENTITY_TYPE,
+			new Identifier("ssc_addon", "parasitic_seed"),
+			FabricEntityTypeBuilder.<net.onixary.shapeShifterCurseFabric.ssc_addon.entity.ParasiticSeedProjectile>create(SpawnGroup.MISC, net.onixary.shapeShifterCurseFabric.ssc_addon.entity.ParasiticSeedProjectile::new)
+					.dimensions(EntityDimensions.fixed(0.25f, 0.25f))
+					.trackRangeBlocks(64).trackedUpdateRate(10)
+					.build()
+	);
+	public static final ScreenHandlerType<PotionBagScreenHandler> POTION_BAG_SCREEN_HANDLER = new ScreenHandlerType<>(PotionBagScreenHandler::new, FeatureSet.empty());
 	public static final EntityType<FrostStormEntity> FROST_STORM_ENTITY = Registry.register(
 			Registries.ENTITY_TYPE,
 			new Identifier("ssc_addon", "frost_storm"),
@@ -313,6 +326,9 @@ public class SscAddon implements ModInitializer {
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "frost_freeze"), FROST_FREEZE);
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "frost_fall"), FROST_FALL);
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "purified"), PURIFIED);
+		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "bat_regen"), BAT_REGEN);
+		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "bat_poison"), BAT_POISON);
+		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "bat_absorption"), BAT_ABSORPTION);
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "mist_form"), MIST_FORM);
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "mist_charging"), MIST_CHARGING);
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "sand_blind"), SAND_BLIND);
@@ -381,6 +397,10 @@ public class SscAddon implements ModInitializer {
 		net.onixary.shapeShifterCurseFabric.ssc_addon.loot.StoryBookLoot.init();
 		net.onixary.shapeShifterCurseFabric.ssc_addon.ability.AllaySPTotem.init();
 		net.onixary.shapeShifterCurseFabric.ssc_addon.ability.InfectionSporeManager.init();
+		net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticSeedFieldManager.init();
+		net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticCombatTracker.init();
+		net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticAbsorptionManager.init();
+		net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticSeedEnergyRegen.init();
 		net.onixary.shapeShifterCurseFabric.ssc_addon.ability.SeedEnergyEatingHandler.register();
 		LifesavingCatTailItem.registerLootTable();
 		AnkhStoneItem.registerLootTable();

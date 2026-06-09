@@ -8,9 +8,7 @@
         "operation": "add"
     },
     "condition": {
-        "type": "origins:resource",
-        "resource": "my_addon:form_bat_parasitic_fruit_seed_energy",
-        "comparison": "<",
-        "compare_to": 10
+        "type": "origins:constant",
+        "value": false
     }
 }

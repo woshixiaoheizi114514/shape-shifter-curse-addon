@@ -36,8 +36,8 @@ import java.util.List;
 public class InfectionSporeBombEntity extends ThrownItemEntity {
     /** 爆炸特效作用半径 */
     public static final double EXPLOSION_RADIUS = 4.0;
-    /** 默认感染时长（15s） */
-    public static final int DEFAULT_INFECTION_TICKS = 300;
+    /** 默认感染/治疗时长（10s）：命中生物与落地毒雾云统一 */
+    public static final int DEFAULT_INFECTION_TICKS = 200;
     /** 墨绿色中毒粒子（与 StatusEffects.POISON 视觉色调一致） */
     private static final DustParticleEffect POISON_DUST = new DustParticleEffect(new Vector3f(0.30f, 0.50f, 0.10f), 1.0f);
 
@@ -74,6 +74,15 @@ public class InfectionSporeBombEntity extends ThrownItemEntity {
         if (this.isRemoved()) return;
 
         explode();
+        // 落地（命中方块）时额外生成一团滞留毒雾云：进入者按云剩余寿命被感染/治疗
+        if (hitResult.getType() == HitResult.Type.BLOCK
+                && this.getWorld() instanceof ServerWorld sw
+                && this.getOwner() instanceof ServerPlayerEntity caster) {
+            // 落地额外特效：药水粒子向上飘散
+            spawnRisingPotionParticles(sw, hitResult.getPos());
+            InfectionSporeManager.spawnCloud(caster, sw, hitResult.getPos(),
+                    InfectionSporeManager.CLOUD_RADIUS, DEFAULT_INFECTION_TICKS);
+        }
         this.discard();
     }
 
@@ -114,6 +123,20 @@ public class InfectionSporeBombEntity extends ThrownItemEntity {
             } else {
                 InfectionSporeManager.infect(caster, target, DEFAULT_INFECTION_TICKS);
             }
+        }
+    }
+
+    /** 落地额外特效：药水粒子向上飘散（count=0 时后三位为速度，vy>0 即上飘）。 */
+    private void spawnRisingPotionParticles(ServerWorld w, Vec3d pos) {
+        for (int i = 0; i < 14; i++) {
+            double vx = (this.random.nextDouble() - 0.5) * 0.05;
+            double vy = 0.08 + this.random.nextDouble() * 0.08;   // 正向上 → 上飘
+            double vz = (this.random.nextDouble() - 0.5) * 0.05;
+            w.spawnParticles(ParticleTypes.EFFECT,
+                    pos.x + (this.random.nextDouble() - 0.5) * 0.8,
+                    pos.y + 0.1,
+                    pos.z + (this.random.nextDouble() - 0.5) * 0.8,
+                    0, vx, vy, vz, 1.0);
         }
     }
 }
