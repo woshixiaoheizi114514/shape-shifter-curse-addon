@@ -53,7 +53,9 @@ public class SnowFoxSpMeleeAbility {
 		int currentMana = PowerUtils.getResourceValue(player, RESOURCE_ID);
 
 		if (currentMana < MANA_COST) {
-			player.playSound(SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.PLAYERS, 0.5f, 1.0f);
+			// 法力不足提示音仅施法者自己听（player.playSound 在服务端会排除自己，故改为定向发包）
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaMarkManager.playSoundToPlayer(
+					player, SoundEvents.BLOCK_FIRE_EXTINGUISH, 0.5f, 1.0f);
 			return false;
 		}
 

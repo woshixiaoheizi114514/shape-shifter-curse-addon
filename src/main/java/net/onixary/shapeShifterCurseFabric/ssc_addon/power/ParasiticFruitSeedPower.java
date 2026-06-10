@@ -147,10 +147,9 @@ public class ParasiticFruitSeedPower extends ActiveCooldownPower {
 
         // 改为抛物线投掷：发射灵果种子投掷物。命中生物由投掷物回调 plantSeed；未命中落地后续生成种子圈。
         PowerUtils.changeResourceValueAndSync(caster, FormIdentifiers.BAT_PARASITIC_FRUIT_SEED_ENERGY, -energyCost);
-        launchSeedProjectile(caster);
+        launchSeedProjectile(caster, twinPod);
         if (twinPod) {
-            // 双生种荚：额外再投一颗
-            launchSeedProjectile(caster);
+            // 双生种荷：命中扩散（额外 1 人，无人叠 2 层），冷却 +1 秒
             applyCooldown(cooldownTicks + 20);
         } else {
             applyCooldown(cooldownTicks);
@@ -158,11 +157,12 @@ public class ParasiticFruitSeedPower extends ActiveCooldownPower {
     }
 
     /** 发射一颗灵果种子投掷物（抛物线，速度同孢子炸弹）。 */
-    private void launchSeedProjectile(ServerPlayerEntity caster) {
+    private void launchSeedProjectile(ServerPlayerEntity caster, boolean twinPod) {
         net.onixary.shapeShifterCurseFabric.ssc_addon.entity.ParasiticSeedProjectile seed =
                 new net.onixary.shapeShifterCurseFabric.ssc_addon.entity.ParasiticSeedProjectile(caster.getWorld(), caster);
         seed.setItem(net.minecraft.item.Items.WHEAT_SEEDS.getDefaultStack());
         seed.setOwner(caster);
+        seed.setTwinPod(twinPod);
         seed.setPos(caster.getX(), caster.getEyeY() - 0.1, caster.getZ());
         seed.setVelocity(caster, caster.getPitch(), caster.getYaw(), 0.0f, 1.4f, 0.4f);
         Vec3d ownerVel = caster.getVelocity();
@@ -300,6 +300,43 @@ public class ParasiticFruitSeedPower extends ActiveCooldownPower {
         }
     }
 
+    /**
+     * 双生种荷扩散：命中宿主后，向其 4 格内额外寄生最近 1 个目标；
+     * 若附近无其它可寄生目标，则给命中宿主叠 2 层。非双生种荷时退化为普通单层寄生。
+     */
+    public static void plantSeedSpread(ServerPlayerEntity caster, LivingEntity host, boolean twinPod) {
+        if (caster == null || host == null || !host.isAlive()) return;
+        if (!twinPod) {
+            plantSeedFrom(caster, host);
+            return;
+        }
+        LivingEntity extra = findNearbyOther(caster, host);
+        if (extra != null) {
+            plantSeedFrom(caster, host);
+            plantSeedFrom(caster, extra);
+        } else {
+            // 附近无额外目标：给命中宿主叠 2 层
+            plantSeedFrom(caster, host);
+            plantSeedFrom(caster, host);
+        }
+    }
+
+    /** 在 primary 周围 4 格内查找最近的另一个可寄生生物（排除施法者与 primary 本身）。 */
+    private static LivingEntity findNearbyOther(ServerPlayerEntity caster, LivingEntity primary) {
+        net.minecraft.util.math.Box box = primary.getBoundingBox().expand(4.0D);
+        LivingEntity best = null;
+        double bestDistSq = Double.MAX_VALUE;
+        for (LivingEntity e : caster.getWorld().getEntitiesByClass(LivingEntity.class, box,
+                living -> living.isAlive() && living != caster && living != primary)) {
+            double d = e.squaredDistanceTo(primary);
+            if (d < bestDistSq) {
+                bestDistSq = d;
+                best = e;
+            }
+        }
+        return best;
+    }
+
     /** 带自定义时长的静态回调（种子圈拾取用，时长 = 剩余）。 */
     public static void plantSeedFrom(ServerPlayerEntity caster, LivingEntity host, int baseLife) {
         if (caster == null || host == null || !host.isAlive()) return;
@@ -380,8 +417,8 @@ public class ParasiticFruitSeedPower extends ActiveCooldownPower {
     private void applyFriendBuff(LivingEntity target, boolean self, int stack) {
         boolean inCombat = net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticCombatTracker.isInCombat(target);
         float hpRatio = target.getHealth() / Math.max(1.0f, target.getMaxHealth());
-        // buff 时长 = 叮声间隔 + 0.2s = 44t（每次结果刷新，总持续 = 种子寿命）
-        int buffDur = FRUIT_INTERVAL_TICKS + 4;
+        // buff 时长 = 叮声间隔 + 0.2s = 44t，再乘腐殖之戒系数（装备时友军增益 ×0.7）
+        int buffDur = Math.max(10, Math.round((FRUIT_INTERVAL_TICKS + 4) * currentHumusFactor));
         if (!inCombat) {
             if (hpRatio > 0.7f) {
                 // 未交战 + 高血：急迫 I
@@ -395,12 +432,12 @@ public class ParasiticFruitSeedPower extends ActiveCooldownPower {
                 // 交战 + 高血：迅捷 II
                 addEffect(target, StatusEffects.SPEED, buffDur, 1);
             } else if (hpRatio >= 0.5f) {
-                // 交战 + 中血：伤害吸收 I（自定义累加黄心）+ 生命恢复（1 心）
-                net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticAbsorptionManager.addAbsorption(target, 0);
+                // 交战 + 中血：伤害吸收 I（自定义累加黄心，持续受腐殖之戒系数）+ 生命恢复（1 心）
+                net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticAbsorptionManager.addAbsorption(target, 0, currentHumusFactor);
                 healWithFx(target, 1);
             } else {
-                // 交战 + 低血：伤害吸收 II（自定义累加黄心）+ 生命恢复（2 心）
-                net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticAbsorptionManager.addAbsorption(target, 1);
+                // 交战 + 低血：伤害吸收 II（自定义累加黄心，持续受腐殖之戒系数）+ 生命恢复（2 心）
+                net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticAbsorptionManager.addAbsorption(target, 1, currentHumusFactor);
                 healWithFx(target, 2);
             }
         }

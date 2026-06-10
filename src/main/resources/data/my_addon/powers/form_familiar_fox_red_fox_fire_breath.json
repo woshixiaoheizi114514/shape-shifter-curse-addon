@@ -24,8 +24,8 @@
             },
             {
                 "type": "origins:play_sound",
-                "sound": "minecraft:entity.fox.ambient",
-                "volume": 0.5,
+                "sound": "minecraft:entity.fox.screech",
+                "volume": 1.0,
                 "pitch": 1.0
             },
             {

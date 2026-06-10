@@ -34,6 +34,12 @@ public class ParasiticSeedProjectile extends ThrownItemEntity {
     private static final DustParticleEffect SEED_TRAIL = new DustParticleEffect(new Vector3f(0.35f, 0.95f, 0.30f), 1.0f);
     /** 落地种子圈寿命（tick，匹配主技能 duration 默认 240=12s） */
     private static final int DEFAULT_FIELD_LIFE = 240;
+    /** 是否装备双生种荷（命中/落地时启用扩散：额外寄生 1 人，无人则叠 2 层）。 */
+    private boolean twinPod = false;
+
+    public void setTwinPod(boolean twinPod) {
+        this.twinPod = twinPod;
+    }
 
     public ParasiticSeedProjectile(EntityType<? extends ParasiticSeedProjectile> entityType, World world) {
         super(entityType, world);
@@ -71,13 +77,13 @@ public class ParasiticSeedProjectile extends ThrownItemEntity {
                 && hitResult instanceof EntityHitResult ehr
                 && ehr.getEntity() instanceof LivingEntity host
                 && host.isAlive() && caster != null) {
-            // 命中生物：在宿主身上种下灵果种子（保留原生根结果，友/敌果实由 power 内部判定）
-            ParasiticFruitSeedPower.plantSeedFrom(caster, host);
+            // 命中生物：在宿主身上种下灵果种子（双生种荷时扩散额外 1 人/无人叠 2 层）
+            ParasiticFruitSeedPower.plantSeedSpread(caster, host, twinPod);
         } else if (hitResult.getType() == HitResult.Type.BLOCK
                 && this.getWorld() instanceof ServerWorld sw && caster != null) {
-            // 落地：生成灵果种子圈（绿色治疗环 + 绿色混凝土核心，进圈玩家可拾取）
+            // 落地：生成灵果种子圈（绿色治疗环 + 核心图标，进圈生物触发；双生种荷时核心为双生种荷）
             net.onixary.shapeShifterCurseFabric.ssc_addon.ability.ParasiticSeedFieldManager
-                    .spawnField(caster, sw, this.getPos(), DEFAULT_FIELD_LIFE);
+                    .spawnField(caster, sw, this.getPos(), DEFAULT_FIELD_LIFE, twinPod);
         }
         this.discard();
     }

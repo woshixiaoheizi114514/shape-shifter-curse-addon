@@ -60,15 +60,21 @@ public final class ParasiticAbsorptionManager {
 
     /** 触发吸收：累加 (amp+1) 颗黄心并把持续刷新到 15s，同时刷新显示图标。 */
     public static void addAbsorption(LivingEntity entity, int amplifier) {
+        addAbsorption(entity, amplifier, 1.0f);
+    }
+
+    /** 带持续时长系数的触发（腐殖之戒传 0.7 使黄心持续 -30%）。 */
+    public static void addAbsorption(LivingEntity entity, int amplifier, float durationFactor) {
         if (!(entity.getWorld() instanceof ServerWorld world)) return;
         long now = world.getTime();
+        int duration = Math.max(20, Math.round(MAX_DURATION * durationFactor));
         float add = (amplifier + 1) * 2.0f;
         entity.setAbsorptionAmount(entity.getAbsorptionAmount() + add);
         AbsorptionData d = DATA.computeIfAbsent(entity.getUuid(), k -> new AbsorptionData());
         d.granted += add;
-        d.endTick = now + MAX_DURATION;
-        // 纯显示图标（时长 = 15s，到期由本管理器清 absorption）
-        entity.addStatusEffect(new StatusEffectInstance(SscAddon.BAT_ABSORPTION, MAX_DURATION, amplifier, false, true, true));
+        d.endTick = now + duration;
+        // 纯显示图标（到期由本管理器清 absorption）
+        entity.addStatusEffect(new StatusEffectInstance(SscAddon.BAT_ABSORPTION, duration, amplifier, false, true, true));
     }
 
     private static void onWorldTick(ServerWorld world) {
