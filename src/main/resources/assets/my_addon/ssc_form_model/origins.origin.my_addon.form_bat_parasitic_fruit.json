@@ -8,8 +8,8 @@
   "wide_only": true,
 
   "model": "my_addon:geo/form_bat_3.geo.json",
-  "texture": "shape-shifter-curse:textures/form/form_bat_3/form_bat_3.png",
-  "texture_mask": "shape-shifter-curse:textures/form/form_bat_3/form_bat_3_colormask.png",
+  "texture": "my_addon:textures/form/form_bat_3/form_bat_3.png",
+  "texture_mask": "my_addon:textures/form/form_bat_3/form_bat_3_colormask.png",
   "hidden": [
     "leftArm",
     "rightArm",
