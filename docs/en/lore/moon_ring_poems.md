@@ -4,41 +4,47 @@
 
 ---
 
-## The Ancient Ballad
+## Ancient Ballad
 
-The ancient silver ring sleeps within the dust,
-Engraved with stars and the crescent's lament.
-When the purple moonshade climbs the celestial dais,
-The shackles of the curse shall open for thee.
+Ancient golden ring, asleep in dust deep,
+Carved with stars, and the crescent's weep.
+When purple moon shadows climb the dome high,
+The shackles of curse shall open to the sky.
 
-The pain of flesh is the altar of ascension,
-The overflowing radiance surges from the soul.
-Not just form — even fate is rewritten,
-Becoming the beast that wanders at will.
+Pain of the flesh, a sublime altar's stone,
+Overloaded radiance, from soul is blown.
+Not just the form, but fate is redrawn,
+Turning into a beast, wandering alone.
 
-But hear, within the wind, a whisper of solitude,
-The walker's life burns down like kindling.
-The price of power, a shadow none can shed,
-Will at last in ember become a single sigh.
-
----
-
-## The Hidden Maxim
-
-Moon-marrow, silver-bone,
-Beneath the purple radiance, form and shadow stand alone.
-Break the thousand-locks of mortal flesh,
-Burn the broken body to dust through all the ages.
-Power is given, life is paid in full,
-Ask not where the road home lies.
-Only the cold frost congealing on jade-green blood,
-Only a long sigh filling the desolate path.
+But hear in the wind, a monologue soft,
+The walker's life burns, held aloft.
+The price of power, a shadow so tight,
+Ends in embers, a sorrowful night.
 
 ---
 
-## Item Description Verse
+## Obscure Proverb
 
-A ring forged of the moon's very essence,
-Bearing the strings of curse and fate.
-If you wish to shatter the cage of form,
-You must resolve to make the sacrifice.
+Marrow of moon, bone of silver white,
+Lonely shadow beneath the purple light.
+Breaking mortal locks, a thousandfold tight,
+Burning the remnant body, in endless blight.
+
+Power is given, life is the cost,
+Ask not where the return path is lost.
+Only frost congeals on blood of jade hue,
+Leaving long sighs to fill the barren view.
+
+---
+
+## Ring of the Moon
+
+A ring cast from the moon's essence pure,
+Glowing cold under the full moon's curse sure.
+It craves not just the psionic wave,
+But the wearer's life, it seeks to deprave.
+
+If you seek to break the form's bar,
+Make the sacrifice, however far.
+A ship of power and ruin, side by side,
+Sailing to a shore where you cannot hide.

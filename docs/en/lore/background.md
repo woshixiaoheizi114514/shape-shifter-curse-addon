@@ -53,6 +53,23 @@ The state in which a Shape Shifter has completely finished their transformation 
 
 ---
 
+### Power of the Moon Scar
+
+The legend of the Spirit Realm Lord did not end with "Red's" sacrifice. When a later Shape Shifter seeks out and reads every scattered page recounting the Spirit Realm Lord and the Moon Essence Cross, a memory that is not their own awakens within them — this power is called the **Power of the Moon Scar**.
+
+It is said that a Familiar Fox who has ascended to the Spirit Realm Lord (SP Familiar Fox), once they have gathered all related records, will one night under a Cursed Moon be wholly consumed by that memory in their sleep, permanently transforming into the legendary crimson form, "Red." Only the faint glow of the Moon Essence Cross can call the self back from the chaos.
+
+---
+
+## Beasts Under the Curse
+
+The moon's rewriting was never aimed only at humans, foxes, and wolves. When the power of the Moon Essence Cross or the Evolution Stone soaks into a night-flying bat, it too transforms into something utterly different:
+
+- **Desmodus (Vampire Bat)**: Under the Moon Essence Cross, it becomes a blood-craving vampire, driven by Blood Thirst, hunting by night and fearing sunlight and iron.
+- **Parasitic Fruit Bat**: Under the Evolution Stone, it mutates into a sower, planting spiritfruit seeds into allies and enemies alike, managing the battlefield between buffs and debuffs.
+
+---
+
 ## Further Reading
 
 - [Moonlight Curse](moonlight_curse.md) — Worldview prose
@@ -60,3 +77,6 @@ The state in which a Shape Shifter has completely finished their transformation 
 - [The Jungle Ghost](jungle_ghost.md) — Short story
 - [Familiar Research Notes](familiar_research.md) — Experimental archives
 - [Moon Essence Cross Poems](moon_ring_poems.md) — Poetry collection
+- [The Vanishing Camel Bells](vanishing_camel_bells.md) — Short story (Golden Sandstorm · Netherwolves)
+- [Mancianima Research](mancianima_research.md) — Experimental archives (Mancianima)
+- [Soreth East Road](soreth_east_road.md) — Long-form story
