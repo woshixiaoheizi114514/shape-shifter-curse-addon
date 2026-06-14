@@ -194,7 +194,7 @@ public class FoxFireballEntity extends ProjectileEntity implements net.minecraft
         }
     }
 
-    /** 火球本体：2 格直径（半径 1）火焰球 + 短拖尾（双火焰 + 稀疏烟雾）。 */
+    /** 火球本体：2 格直径（半径 1）火焰球 + 短拖尾（双火焰 + 稀疏烟雾）+ 岩浆火星 + 熔岩滴落。 */
     private void spawnTrail(ServerWorld w) {
         double x = this.getX(), y = this.getY(), z = this.getZ();
         Random rnd = this.random;
@@ -205,6 +205,19 @@ public class FoxFireballEntity extends ProjectileEntity implements net.minecraft
         for (int i = 0; i < 7; i++) {
             Vec3d p = randomInSphere(1.0, rnd);
             w.spawnParticles(ParticleTypes.SOUL_FIRE_FLAME, x + p.x, y + p.y, z + p.z, 1, 0, 0, 0, 0.01);
+        }
+        // 岩浆火星：从火球表面随机迸出的小火花。
+        if (rnd.nextFloat() < 0.3f) {
+            Vec3d p = randomInSphere(0.4, rnd);
+            w.spawnParticles(ParticleTypes.LAVA, x + p.x, y + p.y, z + p.z, 1, 0.003, 0.008, 0.003, 0.0);
+        }
+        // 熔岩往下滴落：火球下方零星滴落的熔岩粒子。
+        if (rnd.nextFloat() < 0.07f) {
+            w.spawnParticles(ParticleTypes.FALLING_LAVA,
+                    x + (rnd.nextDouble() - 0.5) * 1.0,
+                    y - 0.6 + (rnd.nextDouble() - 0.5) * 0.8,
+                    z + (rnd.nextDouble() - 0.5) * 1.0,
+                    1, 0, -0.1, 0, 0.01);
         }
         Vec3d back = direction.multiply(-0.5);
         w.spawnParticles(ParticleTypes.FLAME, x + back.x, y + back.y, z + back.z, 2, 0.15, 0.15, 0.15, 0.0);
