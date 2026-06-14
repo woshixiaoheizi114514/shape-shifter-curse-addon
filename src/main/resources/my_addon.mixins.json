@@ -7,6 +7,10 @@
     "mixins":  [
                    "effect.AllaySPTotemMixin",
                    "AnkhStoneTotemMixin",
+                   "item.BrewingStandInfinitePotionMixin",
+                   "item.BrewingPotionSlotMixin",
+                   "item.BrewingRegistryInfiniteMixin",
+                   "client.PotionBagCooldownBypassMixin",
                    "CursedMoonSpMessageMixin",
                    "entity.BindingAnkletAuraMixin",
                    "entity.FallenAllayVexMixin",
@@ -52,7 +56,7 @@
                    "input.StunnedMouseMixin",
                    "render.TrueInvisibilityArmorMixin",
                    "render.MistFormHeldItemMixin",
-                   "client.MinecraftClientSetScreenMixin",
+                    "client.MinecraftClientSetScreenMixin",
                    "client.SoundManagerDeafenMixin",
                    "client.TransformingControllerFeralAnimMixin"
                ],

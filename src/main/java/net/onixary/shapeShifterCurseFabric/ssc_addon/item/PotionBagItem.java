@@ -1,6 +1,7 @@
 package net.onixary.shapeShifterCurseFabric.ssc_addon.item;
 
 import net.minecraft.client.item.TooltipContext;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.player.PlayerEntity;
@@ -33,32 +34,25 @@ public class PotionBagItem extends Item {
 
 	/** 快捷投放栏槽位索引（药水包最左侧槽位）。 */
 	private static final int QUICK_SLOT = 0;
-	/** 投掷型药水的冷却：5 秒（100 tick）。基于药水袋 NBT 世界时间戳，不用 ItemCooldownManager（后者会让 interactItem 直接 PASS，导致冷却期间连药水袋都打不开）。 */
+	/**
+	 * 普通投掷药水的投掷间隔冷却：5 秒（100 tick）。记录在药水袋 NBT（{@link #NBT_THROW_END}），
+	 * 不直接占用 ItemCooldownManager —— 白色遮罩统一由 {@link #inventoryTick} 按「快捷栏药水自身剩余冷却」
+	 * 同步，使遮罩长度与所投药水一致（普通药水=投掷间隔；无限药水=各形态充能时长），换药水时自动重置。
+	 */
 	private static final int THROW_COOLDOWN = 100;
-	/** 药水袋投掷冷却结束时刻的 NBT 键（世界 game time）。 */
-	private static final String NBT_THROW_CD = "ThrowCooldownEnd";
 	/** 饮用型药水的饮用读条时长：比原版直接喝（32 tick）长 15% ≈ 37 tick。 */
 	private static final int DRINK_TIME = 37;
+	/** 药水袋 NBT：普通投掷药水的投掷冷却结束世界时间（game time）。 */
+	private static final String NBT_THROW_END = "ThrowEndTime";
+	/** 药水袋 NBT：冷却遮罩同步令牌（= 当前快捷栏药水冷却结束的世界时间，0 表示无冷却）。 */
+	private static final String NBT_CD_TOKEN = "CdToken";
 
 	public PotionBagItem(Settings settings) {
 		super(settings.maxCount(1));
 	}
 
-	/** 药水袋投掷冷却是否未结束（基于世界时间戳，不会阻止 use 被调用，故不影响潜行开包）。 */
-	private static boolean isThrowOnCooldown(ItemStack bagStack, World world) {
-		NbtCompound nbt = bagStack.getNbt();
-		if (nbt == null || !nbt.contains(NBT_THROW_CD)) {
-			return false;
-		}
-		return world.getTime() < nbt.getLong(NBT_THROW_CD);
-	}
-
-	/** 设置药水袋投掷冷却：结束时刻 = 当前世界时间 + 5 秒。 */
-	private static void setThrowCooldown(ItemStack bagStack, World world) {
-		bagStack.getOrCreateNbt().putLong(NBT_THROW_CD, world.getTime() + THROW_COOLDOWN);
-	}
-
 	/** 是否为无限压缩能量药水（任意形态）。 */
+
 	private static boolean isInfinite(ItemStack stack) {
 		return stack.getItem() instanceof InfiniteEnergyPotionItem;
 	}
@@ -111,24 +105,24 @@ public class PotionBagItem extends Item {
 
 		if (isThrowable(potion)) {
 			if (isInfinite(potion)) {
-				// 无限药水：仅由自身空瓶充能门控，不占用药水袋投掷冷却
+				// 无限药水：仅由自身空瓶充能门控；白色遮罩由 inventoryTick 按其充能时长同步
 				if (InfiniteEnergyPotionItem.isRecharging(potion, world)) {
 					return TypedActionResult.fail(stack);
 				}
 				if (!world.isClient) {
-					throwPotion(world, user, stack, potion);
+					throwPotion(world, user, stack, potion); // 内部 markUsed → 写 FullAtTime
 				}
 				return TypedActionResult.success(stack);
 			}
-			// 普通投掷药水：药水袋自身 5 秒投掷冷却（基于 NBT 世界时间戳，不会阻止潜行开包）
-			if (isThrowOnCooldown(stack, world)) {
+			// 普通投掷药水：药水袋自身投掷间隔冷却（记录在药水袋 NBT，双端一致）
+			if (isThrowCoolingDown(stack, world)) {
 				return TypedActionResult.fail(stack);
 			}
 			if (!world.isClient) {
 				throwPotion(world, user, stack, potion);
 			}
-			// 双端均设置冷却时间戳（world.getTime 双端同步），避免客机连点重复发包
-			setThrowCooldown(stack, world);
+			// 双端记录投掷冷却结束时间（world.getTime 双端同步）；白色遮罩由 inventoryTick 同步
+			stack.getOrCreateNbt().putLong(NBT_THROW_END, world.getTime() + THROW_COOLDOWN);
 			return TypedActionResult.success(stack);
 		}
 
@@ -215,6 +209,50 @@ public class PotionBagItem extends Item {
 		world.spawnEntity(potionEntity);
 		potion.decrement(1);
 		PotionBagScreenHandler.setStoredStack(bagStack, QUICK_SLOT, potion);
+	}
+
+	/** 普通投掷药水是否仍在投掷间隔冷却中（基于药水袋 NBT 记录的结束世界时间）。 */
+	private static boolean isThrowCoolingDown(ItemStack bag, World world) {
+		NbtCompound nbt = bag.getNbt();
+		return nbt != null && nbt.contains(NBT_THROW_END) && world.getTime() < nbt.getLong(NBT_THROW_END);
+	}
+
+	/**
+	 * 每 tick 把「快捷栏槽位药水自身的剩余冷却」同步到药水袋的 ItemCooldownManager 白色遮罩：
+	 * <ul>
+	 *   <li>无限药水 → 其空瓶充能结束时间（各形态时长不同：饮用 10s / 喷溅 15s / 滞留 20s）</li>
+	 *   <li>普通投掷药水 → 药水袋记录的投掷间隔冷却结束时间（5s）</li>
+	 *   <li>其它（普通可饮用药水/空）→ 无冷却</li>
+	 * </ul>
+	 * 以「冷却结束的世界时间」作为同步令牌（{@link #NBT_CD_TOKEN}），仅当令牌变化（换药水 / 再次使用）时
+	 * 才重新 set/remove 遮罩，避免每 tick 重置导致遮罩卡满。仅服务端执行，set 会自动同步到客户端遮罩。
+	 */
+	@Override
+	public void inventoryTick(ItemStack stack, World world, Entity entity, int slot, boolean selected) {
+		if (!world.isClient && entity instanceof PlayerEntity player) {
+			ItemStack potion = PotionBagScreenHandler.getStoredStack(stack, QUICK_SLOT);
+			long time = world.getTime();
+			long endTime = 0L;
+			if (potion.getItem() instanceof InfiniteEnergyPotionItem) {
+				endTime = InfiniteEnergyPotionItem.getRechargeEndTime(potion);
+			} else if (isThrowable(potion)) {
+				NbtCompound nbt = stack.getNbt();
+				if (nbt != null && nbt.contains(NBT_THROW_END)) {
+					endTime = nbt.getLong(NBT_THROW_END);
+				}
+			}
+			long token = endTime > time ? endTime : 0L; // 已过期视为无冷却
+			long lastToken = stack.getNbt() != null ? stack.getNbt().getLong(NBT_CD_TOKEN) : 0L;
+			if (token != lastToken) {
+				stack.getOrCreateNbt().putLong(NBT_CD_TOKEN, token);
+				if (token > 0L) {
+					player.getItemCooldownManager().set(this, (int) (token - time));
+				} else {
+					player.getItemCooldownManager().remove(this);
+				}
+			}
+		}
+		super.inventoryTick(stack, world, entity, slot, selected);
 	}
 
 	@Override

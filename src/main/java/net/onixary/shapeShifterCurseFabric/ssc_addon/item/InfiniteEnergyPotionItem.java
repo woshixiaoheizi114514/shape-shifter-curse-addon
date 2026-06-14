@@ -28,7 +28,9 @@ import java.util.List;
  * 无限压缩能量药水：使用后进入「空瓶」自充能状态，充能完成后自动恢复满瓶可再次使用。
  * 充能基于世界游戏时间戳（NBT 记录充满时刻），任意位置自动充能、无需 tick，跨维度一致。
  * 效果与压缩能量药水（feed_potion）完全一致：饮用施加 FEED_EFFECT；喷溅/滞留复用原版投掷药水行为。
- * 特意不继承 PotionItem（避免被“药水可堆叠”类模组对所有 PotionItem 放开堆叠而变得可叠加）；酿造通过主包数据驱动 dynamic_brewing_recipes 实现。
+ * 特意不继承 PotionItem（避免被“药水可堆叠”类模组对所有 PotionItem 放开堆叠而变得可叠加）；
+ * 酿造由 BrewingStandInfinitePotionMixin 实现（放行酿造台槽位 + 直接拦截 hasRecipe/craft 驱动产出，
+ * 不依赖 ITEM_RECIPES 列表注册）：饮用+火药→喷溅，喷溅+龙息→滞留。
  */
 public class InfiniteEnergyPotionItem extends Item {
 
@@ -77,6 +79,12 @@ public class InfiniteEnergyPotionItem extends Item {
 	public static boolean isEmptyByNbt(ItemStack stack) {
 		NbtCompound nbt = stack.getNbt();
 		return nbt != null && nbt.contains(NBT_FULL_AT);
+	}
+
+	/** 返回充能结束的世界游戏时间（无标记返回 0）。供药水袋把剩余充能时间同步到冷却遮罩使用。 */
+	public static long getRechargeEndTime(ItemStack stack) {
+		NbtCompound nbt = stack.getNbt();
+		return (nbt != null && nbt.contains(NBT_FULL_AT)) ? nbt.getLong(NBT_FULL_AT) : 0L;
 	}
 
 	/** 标记一次使用：写入充满时刻 = 当前世界时间 + 充能时长（进入空瓶状态）。供本类与药水袋调用。 */
