@@ -352,7 +352,7 @@
                     },
                     "if_action": {
                         "type": "shape-shifter-curse:consume_mana",
-                        "mana": 1.7
+                        "mana": 1.5
                     },
                     "else_action": {
                         "type": "origins:and",
@@ -419,7 +419,7 @@
                                     "actions": [
                                         {
                                             "type": "my_addon:damage_target_from_actor",
-                                            "amount": 4.0,
+                                            "amount": 5.0,
                                             "damage_type": "minecraft:generic"
                                         },
                                         {
