@@ -11,6 +11,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.collection.DefaultedList;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.SscAddon;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.item.AllayJukeboxItem;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.item.PotionBagItem;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -36,8 +37,17 @@ public abstract class ScreenHandlerMixin {
 			if (slot != null && slot.hasStack()) {
 				ItemStack stack = slot.getStack();
 
-				// Block moving Potion Bag
+				// Potion Bag: 光标拿着药水时放入袋中（左/右键均可，优先非快捷消耗栏），否则锁定不可移动
 				if (stack.isOf(SscAddon.POTION_BAG)) {
+					if (actionType == SlotActionType.PICKUP) {
+						ItemStack cursorStack = this.getCursorStack();
+						if (!cursorStack.isEmpty() && PotionBagItem.isStorable(cursorStack)
+								&& PotionBagItem.insertIntoBag(stack, cursorStack) > 0) {
+							player.playSound(SoundEvents.ITEM_BUNDLE_INSERT, 0.8F,
+									0.8F + player.getWorld().getRandom().nextFloat() * 0.4F);
+							slot.markDirty();
+						}
+					}
 					ci.cancel();
 					return;
 				}

@@ -261,4 +261,70 @@ public class PotionBagItem extends Item {
 		tooltip.add(Text.translatable("item.ssc_addon.potion_bag.tooltip.controls").formatted(Formatting.DARK_GRAY));
 		super.appendTooltip(stack, world, tooltip, context);
 	}
+
+	// ====== 快捷收纳：在其它界面把药水直接放入药水袋（交互逻辑与原版收纳袋一致，优先放入非快捷消耗栏） ======
+
+	/** 药水袋槽位总数（与 {@link PotionBagScreenHandler} 一致：槽位 0 为快捷投放栏，1-8 为非快捷消耗栏）。 */
+	private static final int BAG_SLOTS = 9;
+
+	/** 是否为可放入药水袋的药水类物品（与药水包 GUI 的可放入规则一致）。 */
+	public static boolean isStorable(ItemStack stack) {
+		return stack.getItem() instanceof PotionItem
+				|| stack.getItem() instanceof SplashPotionItem
+				|| stack.getItem() instanceof LingeringPotionItem
+				|| stack.getItem() instanceof InfiniteEnergyPotionItem;
+	}
+
+	/** 单格最大堆叠：无限能量药水每格 1，其余药水每格 8（与药水包 GUI 槽位规则一致）。 */
+	private static int maxPerSlot(ItemStack stack) {
+		return stack.getItem() instanceof InfiniteEnergyPotionItem ? 1 : 8;
+	}
+
+	/**
+	 * 把 {@code source} 中的药水尽量放进药水袋并扣减其数量，返回实际放入的数量。
+	 * 放置优先级：先填非快捷消耗栏（槽位 1-8），快捷投放栏（槽位 0）仅在前者放不下时兜底；
+	 * 各区间内均先合并到同类未满堆叠，再占用空槽位。堆叠规则与药水包 GUI 一致（普通药水每格 8、无限能量药水每格 1）。
+	 */
+	public static int insertIntoBag(ItemStack bag, ItemStack source) {
+		if (source.isEmpty() || !isStorable(source)) {
+			return 0;
+		}
+		int perSlot = maxPerSlot(source);
+		ItemStack[] slots = new ItemStack[BAG_SLOTS];
+		for (int i = 0; i < BAG_SLOTS; ++i) {
+			slots[i] = PotionBagScreenHandler.getStoredStack(bag, i);
+		}
+		// 优先非快捷消耗栏（槽位 1-8），快捷投放栏（槽位 0）兜底
+		int inserted = fillRange(slots, source, perSlot, 1, BAG_SLOTS);
+		inserted += fillRange(slots, source, perSlot, QUICK_SLOT, QUICK_SLOT + 1);
+		if (inserted > 0) {
+			for (int i = 0; i < BAG_SLOTS; ++i) {
+				PotionBagScreenHandler.setStoredStack(bag, i, slots[i]);
+			}
+		}
+		return inserted;
+	}
+
+	/** 在 {@code [from, to)} 槽位区间内放入药水：先合并到同类未满堆叠、再占用空槽位；扣减 {@code source} 并返回放入数量。 */
+	private static int fillRange(ItemStack[] slots, ItemStack source, int perSlot, int from, int to) {
+		int inserted = 0;
+		for (int i = from; i < to && !source.isEmpty(); ++i) {
+			ItemStack slot = slots[i];
+			if (!slot.isEmpty() && slot.getCount() < perSlot && ItemStack.canCombine(slot, source)) {
+				int add = Math.min(perSlot - slot.getCount(), source.getCount());
+				slot.increment(add);
+				source.decrement(add);
+				inserted += add;
+			}
+		}
+		for (int i = from; i < to && !source.isEmpty(); ++i) {
+			if (slots[i].isEmpty()) {
+				int add = Math.min(perSlot, source.getCount());
+				slots[i] = source.copyWithCount(add);
+				source.decrement(add);
+				inserted += add;
+			}
+		}
+		return inserted;
+	}
 }
