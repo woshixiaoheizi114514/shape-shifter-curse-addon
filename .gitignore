@@ -6,7 +6,7 @@ bin/
 /out/
 /.idea/
 .github
-story
+/story/
 /.settings/org.eclipse.buildship.core.prefs
 /.settings/org.eclipse.jdt.core.prefs
 /.settings/org.eclipse.jdt.apt.core.prefs
