@@ -539,6 +539,7 @@ public class SscAddon implements ModInitializer {
 				GoldenSandstormRegen.tick(player);
 				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.BatDesmodusBloodThirst.tick(player);
 				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive.tick(player);
+				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexChargeManager.tick(player);
 			}
 		});
 	}

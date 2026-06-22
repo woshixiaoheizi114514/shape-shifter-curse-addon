@@ -41,6 +41,11 @@ public class SscAddonNetworking {
 	/** C2S：美西螈装死期间按技能键请求提前结束装死。无 payload。 */
 	public static final Identifier PACKET_PLAY_DEAD_END = new Identifier("my_addon", "play_dead_end");
 
+	/** C2S：美西螈漩涡开始蓄力。无 payload。 */
+	public static final Identifier PACKET_VORTEX_START = new Identifier("my_addon", "vortex_start");
+	/** C2S：美西螈漩涡释放（提前释放）。无 payload。 */
+	public static final Identifier PACKET_VORTEX_RELEASE = new Identifier("my_addon", "vortex_release");
+
 	/** C2S 限频：每玩家每个事件类型记录上一次服务端接收时间，防外挂客户端 spam。 */
 	private static final Map<UUID, Long> LAST_WHITELIST_PACKET_TICK = new ConcurrentHashMap<>();
 	/** 同一玩家两次白名单操作的最小间隔，单位：millis。 */
@@ -136,6 +141,14 @@ public class SscAddonNetworking {
 				// 提前结束：CD 从此刻起算 25 秒
 				net.onixary.shapeShifterCurseFabric.ssc_addon.util.PowerUtils.setResourceValueAndSync(player, net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers.SP_SECONDARY_CD, 500);
 			});
+		});
+
+		// SSCA 美西螈漩涡蓄力 - 开始 / 释放
+		ServerPlayNetworking.registerGlobalReceiver(PACKET_VORTEX_START, (server, player, handler, buf, responseSender) -> {
+			server.execute(() -> net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexChargeManager.start(player));
+		});
+		ServerPlayNetworking.registerGlobalReceiver(PACKET_VORTEX_RELEASE, (server, player, handler, buf, responseSender) -> {
+			server.execute(() -> net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexChargeManager.release(player));
 		});
 	}
 

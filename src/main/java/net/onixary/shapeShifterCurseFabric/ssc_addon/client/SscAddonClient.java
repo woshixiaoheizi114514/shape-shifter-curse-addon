@@ -237,5 +237,8 @@ public class SscAddonClient implements ClientModInitializer {
 
 		// SSCA 美西螈装死 - 提前结束检测器
 		PlayDeadEndClient.register();
+
+		// SSCA 美西螈漩涡蓄力 - 按键检测器
+		VortexChargeClient.register();
 	}
 }
