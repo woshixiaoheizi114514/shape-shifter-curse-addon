@@ -24,6 +24,7 @@ import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaMarkClien
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaMarkManager;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.SkillBlocker;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.WhitelistUtils;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.RegEvolutionComponent;
 
 public class SscAddonConditions {
 
@@ -178,6 +179,18 @@ public class SscAddonConditions {
 				(data, entity) -> {
 					if (entity instanceof ServerPlayerEntity player) {
 						return AnubisWolfSpDeathDomain.isInActiveDomain(player.getUuid(), player.getBlockPos());
+					}
+					return false;
+				}));
+
+		// SSCA 进化加点系统 - 天赋节点解锁条件
+		// 给「可解锁能力」的 power 挂在此条件后：未解锁则该 power 不生效（解锁后自动生效）
+		register(new ConditionFactory<>(new Identifier("ssc_addon", "has_talent"),
+				new SerializableData()
+						.add("talent_id", SerializableDataTypes.STRING),
+				(data, entity) -> {
+					if (entity instanceof PlayerEntity player) {
+						return RegEvolutionComponent.EVOLUTION.get(player).isUnlocked(data.getString("talent_id"));
 					}
 					return false;
 				}));

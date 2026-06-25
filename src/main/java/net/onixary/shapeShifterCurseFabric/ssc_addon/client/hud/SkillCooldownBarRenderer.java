@@ -12,6 +12,8 @@ import net.onixary.shapeShifterCurseFabric.player_form.IForm;
 import net.onixary.shapeShifterCurseFabric.player_form.utils.RegPlayerFormComponent;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.config.SSCAddonClientConfig;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.config.SSCAddonConfig;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.FamiliarFoxTree;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.RegEvolutionComponent;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.PowerUtils;
 
@@ -95,6 +97,13 @@ public class SkillCooldownBarRenderer implements HudRenderCallback {
 
 		Identifier formId = curForm.getFormID();
 		if (!SSCA_FORM_NAMESPACE.equals(formId.getNamespace())) {
+			resetCooldownTracking();
+			return;
+		}
+
+		// SSCA 进化使魔：未解锁「火花」技能前不显示 CD 条（此时还没有主动技能）
+		if (formId.equals(FormIdentifiers.UPGRADE_FAMILIAR_FOX)
+				&& !RegEvolutionComponent.EVOLUTION.get(player).isUnlocked(FamiliarFoxTree.NODE_SPARK)) {
 			resetCooldownTracking();
 			return;
 		}

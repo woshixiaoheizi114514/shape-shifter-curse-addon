@@ -59,7 +59,8 @@
                     "client.MinecraftClientSetScreenMixin",
                    "client.SoundManagerDeafenMixin",
                    "client.TransformingControllerFeralAnimMixin",
-                   "client.CreativePotionStackMixin"
+                   "client.CreativePotionStackMixin",
+                   "client.FamiliarFoxManaBarGateMixin"
                ],
     "injectors":  {
                       "defaultRequire":  1

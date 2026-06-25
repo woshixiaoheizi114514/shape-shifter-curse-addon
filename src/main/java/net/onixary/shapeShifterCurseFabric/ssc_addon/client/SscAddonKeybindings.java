@@ -3,7 +3,7 @@ package net.onixary.shapeShifterCurseFabric.ssc_addon.client;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
-import net.onixary.shapeShifterCurseFabric.integration.origins.OriginsClient;
+import net.onixary.shapeShifterCurseFabric.client.ShapeShifterCurseFabricClient;
 import net.onixary.shapeShifterCurseFabric.player_form.IForm;
 import net.onixary.shapeShifterCurseFabric.player_form.utils.RegPlayerFormComponent;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.config.SSCAddonClientConfig;
@@ -95,10 +95,10 @@ public class SscAddonKeybindings {
 				return isPhysicalKeyDown(primary ? entry.primaryKey : entry.secondaryKey);
 			}
 		}
-		// 同步 SSC：跟随原版 G 键
+		// 同步 SSC：跟随原版主动技能键（active_skill_1/2）
 		KeyBinding sscKey = primary
-				? OriginsClient.usePrimaryActivePowerKeybind
-				: OriginsClient.useSecondaryActivePowerKeybind;
+				? ShapeShifterCurseFabricClient.useActiveSkill1PowerKeybind
+				: ShapeShifterCurseFabricClient.useActiveSkill2PowerKeybind;
 		return sscKey != null && sscKey.isPressed();
 	}
 
@@ -128,7 +128,7 @@ public class SscAddonKeybindings {
 	 * （即绕过 StunnedKeyBindingMixin 在装死/眩晕期对技能键的屏蔽）。
 	 *
 	 * <p>专供美西螈装死「再按副技能键提前结束」检测：装死期 StunnedKeyBindingMixin 会把
-	 * sp_secondary / key.origins.secondary_active 的 isPressed 强制返回 false，导致虚拟键
+	 * sp_secondary / key.shape-shifter-curse.active_skill_2 的 isPressed 强制返回 false，导致虚拟键
 	 * 读不到按键。此方法直接读物理键状态，不受该 mixin 影响。
 	 */
 	public static boolean isSecondaryRawPressed() {
@@ -143,7 +143,7 @@ public class SscAddonKeybindings {
 				return isPhysicalKeyDown(entry.secondaryKey);
 			}
 		}
-		KeyBinding ssc = OriginsClient.useSecondaryActivePowerKeybind;
+		KeyBinding ssc = ShapeShifterCurseFabricClient.useActiveSkill2PowerKeybind;
 		return ssc != null && isPhysicalKeyDown(ssc.getBoundKeyTranslationKey());
 	}
 

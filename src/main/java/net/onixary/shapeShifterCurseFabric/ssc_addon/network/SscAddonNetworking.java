@@ -9,6 +9,7 @@ import net.onixary.shapeShifterCurseFabric.player_form.IForm;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.AllaySPGroupHeal;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaTeleport;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPrimary;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionManager;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormUtils;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.WhitelistUtils;
 
@@ -45,6 +46,16 @@ public class SscAddonNetworking {
 	public static final Identifier PACKET_VORTEX_START = new Identifier("my_addon", "vortex_start");
 	/** C2S：美西螈漩涡释放（提前释放）。无 payload。 */
 	public static final Identifier PACKET_VORTEX_RELEASE = new Identifier("my_addon", "vortex_release");
+
+	// ===== SSCA 进化加点系统网络包（框架） =====
+	/** C2S：玩家选择进化路线。payload: String routeId */
+	public static final Identifier PACKET_EVO_SELECT_ROUTE = new Identifier("my_addon", "evo_select_route");
+	/** C2S：玩家选择 SP 分支。payload: String branchId */
+	public static final Identifier PACKET_EVO_SELECT_BRANCH = new Identifier("my_addon", "evo_select_branch");
+	/** C2S：玩家请求解锁一个天赋节点。payload: String nodeId */
+	public static final Identifier PACKET_EVO_UNLOCK = new Identifier("my_addon", "evo_unlock");
+	/** C2S：开局选形态界面选定一个 SSCA 进化形态、直接走 SSCA 路线进化。payload: String formId */
+	public static final Identifier PACKET_SSCA_START_ROUTE = new Identifier("my_addon", "ssca_start_route");
 
 	/** C2S 限频：每玩家每个事件类型记录上一次服务端接收时间，防外挂客户端 spam。 */
 	private static final Map<UUID, Long> LAST_WHITELIST_PACKET_TICK = new ConcurrentHashMap<>();
@@ -149,6 +160,40 @@ public class SscAddonNetworking {
 		});
 		ServerPlayNetworking.registerGlobalReceiver(PACKET_VORTEX_RELEASE, (server, player, handler, buf, responseSender) -> {
 			server.execute(() -> net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexChargeManager.release(player));
+		});
+
+		// ===== SSCA 进化加点系统 =====
+		ServerPlayNetworking.registerGlobalReceiver(PACKET_EVO_SELECT_ROUTE, (server, player, handler, buf, responseSender) -> {
+			String routeId = buf.readString(256);
+			server.execute(() -> {
+				if (isRateLimited(player)) return;
+				EvolutionManager.selectRoute(player, routeId);
+			});
+		});
+
+		ServerPlayNetworking.registerGlobalReceiver(PACKET_EVO_SELECT_BRANCH, (server, player, handler, buf, responseSender) -> {
+			String branchId = buf.readString(256);
+			server.execute(() -> {
+				if (isRateLimited(player)) return;
+				EvolutionManager.selectBranch(player, branchId);
+			});
+		});
+
+		ServerPlayNetworking.registerGlobalReceiver(PACKET_EVO_UNLOCK, (server, player, handler, buf, responseSender) -> {
+			String nodeId = buf.readString(256);
+			server.execute(() -> {
+				if (isRateLimited(player)) return;
+				EvolutionManager.tryUnlock(player, nodeId);
+			});
+		});
+
+		// 开局选形态界面：直接走 SSCA 进化路线进入选定形态
+		ServerPlayNetworking.registerGlobalReceiver(PACKET_SSCA_START_ROUTE, (server, player, handler, buf, responseSender) -> {
+			String formId = buf.readString(256);
+			server.execute(() -> {
+				if (isRateLimited(player)) return;
+				EvolutionManager.startSscaRoute(player, formId);
+			});
 		});
 	}
 

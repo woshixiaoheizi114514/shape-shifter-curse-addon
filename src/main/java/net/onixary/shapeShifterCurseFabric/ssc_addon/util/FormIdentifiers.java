@@ -4,6 +4,7 @@ import net.minecraft.util.Identifier;
 
 public class FormIdentifiers {
 	public static final Identifier FAMILIAR_FOX_SP = new Identifier("my_addon", "familiar_fox_sp");
+	public static final Identifier UPGRADE_FAMILIAR_FOX = new Identifier("my_addon", "upgrade_familiar_fox");
 	public static final Identifier FAMILIAR_FOX_RED = new Identifier("my_addon", "familiar_fox_red");
 	public static final Identifier FAMILIAR_FOX_MANCIANIMA = new Identifier("my_addon", "familiar_fox_mancianima");
 	public static final Identifier SNOW_FOX_SP = new Identifier("my_addon", "snow_fox_sp");

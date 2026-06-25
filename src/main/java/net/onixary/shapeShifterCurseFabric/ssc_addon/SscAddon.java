@@ -454,6 +454,12 @@ public class SscAddon implements ModInitializer {
 		RegPlayerForms.registerPlayerForm(familiarFoxForm);
 		RegPlayerForms.registerPlayerFormGroup(new NormalGroup(new Identifier("my_addon", "group_familiar_fox_sp")).registerForm(1, 5, familiarFoxForm));
 
+		// 进化使魔（复用使魔模型/动画，能力按进化解锁——批次2 形态骨架）
+		Form_FamiliarFox3 upgradeFamiliarFoxForm = new Form_FamiliarFox3(FormIdentifiers.UPGRADE_FAMILIAR_FOX);
+		upgradeFamiliarFoxForm.formFlag(NoInstinct, NoCursedMoonEffect, SpecialForm, InhibitorImmune);
+		RegPlayerForms.registerPlayerForm(upgradeFamiliarFoxForm);
+		RegPlayerForms.registerPlayerFormGroup(new NormalGroup(new Identifier("my_addon", "group_upgrade_familiar_fox")).registerForm(1, 5, upgradeFamiliarFoxForm));
+
 		Form_FamiliarFoxRed familiarFoxRedForm = new Form_FamiliarFoxRed(FormIdentifiers.FAMILIAR_FOX_RED);
 		familiarFoxRedForm.formFlag(NoInstinct, NoCursedMoonEffect, SpecialForm, InhibitorImmune);
 		RegPlayerForms.registerPlayerForm(familiarFoxRedForm);
@@ -547,6 +553,7 @@ public class SscAddon implements ModInitializer {
 				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive.tick(player);
 				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexChargeManager.tick(player);
 				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.PlayDeadAbsorptionManager.tick(player);
+				net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionManager.tickPlayer(player);
 			}
 		});
 	}

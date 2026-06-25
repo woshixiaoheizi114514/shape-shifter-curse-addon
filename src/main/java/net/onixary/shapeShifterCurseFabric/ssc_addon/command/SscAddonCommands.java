@@ -33,6 +33,7 @@ import net.onixary.shapeShifterCurseFabric.ssc_addon.ability.AllaySPGroupHeal;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.entity.FrostBallEntity;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.PowerUtils;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionManager;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.palette.PaletteCodec;
 import net.onixary.shapeShifterCurseFabric.player_form.skin.PlayerSkinComponent;
 import net.onixary.shapeShifterCurseFabric.player_form.skin.RegPlayerSkinComponent;
@@ -223,6 +224,23 @@ public class SscAddonCommands {
 								)
 						)
 				)
+				// ============== /ssc_addon evolution ==============
+				// SSCA 进化加点系统管理指令（框架）：unlock_all 全解锁 / reset 重置
+				.then(CommandManager.literal("evolution")
+						.requires(source -> source.hasPermissionLevel(2))
+						.then(CommandManager.literal("unlock_all")
+								.executes(ctx -> evolutionUnlockAll(ctx, ctx.getSource().getPlayer()))
+								.then(CommandManager.argument("player", EntityArgumentType.player())
+										.executes(ctx -> evolutionUnlockAll(ctx, EntityArgumentType.getPlayer(ctx, "player")))
+								)
+						)
+						.then(CommandManager.literal("reset")
+								.executes(ctx -> evolutionReset(ctx, ctx.getSource().getPlayer()))
+								.then(CommandManager.argument("player", EntityArgumentType.player())
+										.executes(ctx -> evolutionReset(ctx, EntityArgumentType.getPlayer(ctx, "player")))
+								)
+						)
+				)
 				// ============== /ssc_addon palette ==============
 				// 形态配色「分享码」：导出当前配色为分享文本；apply 一键应用
 				// 不加 .requires(permissionLevel) — 关闭作弊的存档/服务器内普通玩家也能使用；只对执行者本人生效（规则 #49）
@@ -282,6 +300,21 @@ public class SscAddonCommands {
 		// 触发 AutoSyncedComponent 同步，让其它客户端立即看到新配色
 		RegPlayerSkinComponent.SKIN_SETTINGS.sync(player);
 		ctx.getSource().sendFeedback(() -> Text.translatable("ssc_addon.palette.apply.success"), false);
+		return 1;
+	}
+
+	// ============== /ssc_addon evolution ==============
+	private static int evolutionUnlockAll(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity player) {
+		if (player == null) { ctx.getSource().sendError(Text.literal("目标玩家无效")); return 0; }
+		EvolutionManager.unlockAll(player);
+		ctx.getSource().sendFeedback(() -> Text.literal("已将 " + player.getName().getString() + " 的 SSCA 进化路线设为全解锁"), true);
+		return 1;
+	}
+
+	private static int evolutionReset(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity player) {
+		if (player == null) { ctx.getSource().sendError(Text.literal("目标玩家无效")); return 0; }
+		EvolutionManager.reset(player);
+		ctx.getSource().sendFeedback(() -> Text.literal("已重置 " + player.getName().getString() + " 的 SSCA 进化数据"), true);
 		return 1;
 	}
 

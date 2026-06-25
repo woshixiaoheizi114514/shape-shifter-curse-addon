@@ -22,8 +22,8 @@ public class StunnedKeyBindingMixin {
 
 	@Unique
 	private boolean isTargetKey(String key) {
-		return key.equals("key.origins.primary_active") ||
-				key.equals("key.origins.secondary_active") ||
+		return key.equals("key.shape-shifter-curse.active_skill_1") ||
+				key.equals("key.shape-shifter-curse.active_skill_2") ||
 				key.equals("key.ssc_addon.sp_primary") ||
 				key.equals("key.ssc_addon.sp_secondary") ||
 				key.equals("key.use") ||

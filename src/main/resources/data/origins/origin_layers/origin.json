@@ -4,6 +4,7 @@
   "enabled": true,
   "origins": [
     "my_addon:form_familiar_fox_sp",
+    "my_addon:form_upgrade_familiar_fox",
     "my_addon:form_familiar_fox_red",
     "my_addon:form_familiar_fox_mancianima",
     "my_addon:form_axolotl_sp",

@@ -1,0 +1,24 @@
+{
+  "_comment": "SSCA 进化路线定义【占位 / 格式示范】。当前框架阶段尚未实现 JSON 加载器，本文件未被读取；仅作为后续数据驱动的格式样例。详见 附属根目录 SSCA进化加点系统_设计文档.txt 第 4 节。",
+  "_todo": "start_form 的真实形态 ID 待核实（使魔 Form_3 命名空间）；节点树、EXP 数值、分支前置等由后续业务设计填充。",
+
+  "enabled": true,
+  "display_name": "evolution.my_addon.familiar_fox.name",
+  "icon": "my_addon:textures/gui/evolution/familiar_fox.png",
+  "start_form": "my_addon:familiar_fox_3",
+  "talent_tree": "my_addon:familiar_fox",
+  "exp_curve": { "type": "linear", "base": 3, "per_level": 1 },
+
+  "branches": {
+    "branch_a": {
+      "display_name": "evolution.my_addon.familiar_fox.branch_a",
+      "sp_form": "my_addon:familiar_fox_sp",
+      "requires_nodes": ["demo_node_1"]
+    },
+    "branch_b": {
+      "display_name": "evolution.my_addon.familiar_fox.branch_b",
+      "sp_form": "my_addon:familiar_fox_mancianima",
+      "requires_nodes": ["demo_node_1"]
+    }
+  }
+}

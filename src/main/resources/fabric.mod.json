@@ -37,6 +37,9 @@
     ],
     "modmenu": [
       "net.onixary.shapeShifterCurseFabric.ssc_addon.compat.ModMenuIntegration"
+    ],
+    "cardinal-components-entity": [
+      "net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.RegEvolutionComponent"
     ]
   },
   "mixins": [
@@ -60,5 +63,10 @@
         "github": "https://github.com/wuhenqiubai"
       }
     }
-  ]
+  ],
+  "custom": {
+    "cardinal-components": [
+      "ssc_addon:evolution"
+    ]
+  }
 }

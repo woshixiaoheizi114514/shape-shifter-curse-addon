@@ -240,5 +240,11 @@ public class SscAddonClient implements ClientModInitializer {
 
 		// SSCA 美西螈漩涡蓄力 - 按键检测器
 		VortexChargeClient.register();
+
+		// SSCA 进化加点系统 - 在幻形者之书界面注入「进化加点」入口按钮（使魔形态显示）
+		net.onixary.shapeShifterCurseFabric.ssc_addon.client.evolution.EvolutionBookHook.register();
+
+		// SSCA 进化路线 - 在「翻开幻形者之书」开局界面注入「进入 SSCA 进化路线」入口按钮
+		net.onixary.shapeShifterCurseFabric.ssc_addon.client.evolution.SscaStartBookHook.register();
 	}
 }
