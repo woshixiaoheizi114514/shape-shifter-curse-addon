@@ -2,6 +2,7 @@ package net.onixary.shapeShifterCurseFabric.ssc_addon.mixin.input;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
+import net.onixary.shapeShifterCurseFabric.player_form.utils.TransformManager;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.SscAddon;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -54,7 +55,17 @@ public class StunnedKeyBindingMixin {
 	@Unique
 	private boolean isPlayerStunned() {
 		MinecraftClient client = MinecraftClient.getInstance();
-		return client != null && client.player != null && (client.player.hasStatusEffect(SscAddon.STUN) || client.player.hasStatusEffect(SscAddon.PLAYING_DEAD));
+		if (client == null || client.player == null) {
+			return false;
+		}
+		// STUN / 装死期间锁输入；此外变身黑屏过渡期间也锁输入——
+		// 原版 startTransform 黑屏期本就不冻结移动（无移动 mixin，仅靠 TransformOverlay 黑屏遮挡视野），
+		// 故原版催化剂/抑制剂/诅咒之月等触发的变身过渡中玩家仍能 WASD 走动。
+		// TransformManager.transformTimer 是客户端 public 字段，黑屏过渡期间 >=0
+		// （receiveTransformState 收到 isTransforming=true 时置 0、结束置 -1），用它统一冻结所有变身（含原版触发）。
+		return client.player.hasStatusEffect(SscAddon.STUN)
+				|| client.player.hasStatusEffect(SscAddon.PLAYING_DEAD)
+				|| TransformManager.transformTimer >= 0;
 	}
 
 	@Inject(method = "wasPressed", at = @At("HEAD"), cancellable = true)

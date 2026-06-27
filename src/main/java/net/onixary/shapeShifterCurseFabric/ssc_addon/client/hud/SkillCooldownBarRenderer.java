@@ -101,9 +101,8 @@ public class SkillCooldownBarRenderer implements HudRenderCallback {
 			return;
 		}
 
-		// SSCA 进化使魔：未解锁「火花」技能前不显示 CD 条（此时还没有主动技能）
-		if (formId.equals(FormIdentifiers.UPGRADE_FAMILIAR_FOX)
-				&& !RegEvolutionComponent.EVOLUTION.get(player).isUnlocked(FamiliarFoxTree.NODE_SPARK)) {
+		// SSCA 进化使魔：不显示 CD 条（技能 CD 由 Apoli 内部管理，无需 HUD）
+		if (formId.equals(FormIdentifiers.UPGRADE_FAMILIAR_FOX)) {
 			resetCooldownTracking();
 			return;
 		}

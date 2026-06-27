@@ -1,0 +1,11 @@
+{
+    "type": "apoli:particle",
+    "particle": "minecraft:soul_fire_flame",
+    "frequency": 10,
+    "visible_while_invisible": true,
+    "offset_y": 0.15,
+    "condition": {
+        "type": "ssc_addon:has_talent",
+        "talent_id": "fire_ring"
+    }
+}

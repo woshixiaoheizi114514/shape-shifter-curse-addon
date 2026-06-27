@@ -6,6 +6,7 @@ import net.minecraft.entity.damage.DamageType;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.RegistryKey;
@@ -23,6 +24,7 @@ import net.onixary.shapeShifterCurseFabric.player_form.utils.TransformManager;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.story.MoonScarStoryManager;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.AdvancementUtils;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormUtils;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionManager;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.MoonMarrowFormAdvancements;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,6 +52,8 @@ public class SpUpgradeItem extends Item {
 		registerUpgrade("shape-shifter-curse", "anubis_wolf_3", "my_addon", "anubis_wolf_sp");
 		// 吸血蝙蝠：原版蝙蝠三阶段永久态 → desmodus（月髓环 + 诅咒之月夜进化）
 		registerUpgrade("shape-shifter-curse", "bat_3", "my_addon", "bat_desmodus");
+		// 进化使魔（SSCA 路线）→ 灵界之主：需 50 级解锁两分支后才允许（门控在 finishUsing）
+		registerUpgrade("my_addon", "upgrade_familiar_fox", "my_addon", "familiar_fox_sp");
 	}
 
 	public SpUpgradeItem(Settings settings) {
@@ -84,6 +88,14 @@ public class SpUpgradeItem extends Item {
 				return stack;
 			}
 			Identifier targetFormId = getTargetFormId(player);
+			// 进化使魔门控：必须先解锁两个 50 级分支（灵界之主 + 契灵）才能用月髓环继续进化
+			if (targetFormId != null && targetFormId.equals(new Identifier("my_addon", "familiar_fox_sp"))
+					&& player instanceof ServerPlayerEntity spFox
+					&& !EvolutionManager.canUpgradeFoxEvolve(spFox)) {
+				player.sendMessage(Text.translatable("message.ssc_addon.evolution.fail.branches_locked").formatted(Formatting.RED, Formatting.ITALIC), false);
+				world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.PLAYERS, 1.0F, 1.0F);
+				return stack;
+			}
 			boolean isCursedMoon = CursedMoon.isCursedMoonDay(world) && CursedMoon.isNight(world);
 			boolean isValidForm = targetFormId != null;
 			boolean isAlreadySP = isAlreadySP(player);
@@ -103,11 +115,15 @@ public class SpUpgradeItem extends Item {
 				// Success: Base Form + Cursed Moon
 
 				// 5% Chance for Red Form (when upgrading to SP Fox)
-				if (targetFormId != null && targetFormId.equals(new Identifier("my_addon", "familiar_fox_sp")) && world.random.nextFloat() < 0.05f) {
+				if (targetFormId != null && targetFormId.equals(new Identifier("my_addon", "familiar_fox_sp"))
+						&& new Identifier("shape-shifter-curse", "familiar_fox_3").equals(getPlayerFormID(player))
+						&& world.random.nextFloat() < 0.05f) {
 					Identifier redFormId = new Identifier("my_addon", "familiar_fox_red");
 					IForm redForm = RegPlayerForms.getPlayerForm(redFormId);
 					if (redForm != null) {
-						TransformManager.immediatelyTransform(player, redForm);
+						// 带黑屏淡入淡出动画变身（原版 1.10.1 把 handleDirectTransform 拆为 startTransform/immediatelyTransform，
+						// 此处对应原 handleDirectTransform(...,false) 的动画变身，应用 startTransform 而非 immediatelyTransform）
+						TransformManager.startTransform(player, redForm, null);
 
 						// 10 Minutes = 12000 ticks
 						long expireTime = world.getTime() + 12000;
@@ -120,7 +136,8 @@ public class SpUpgradeItem extends Item {
 
 				IForm formBase = RegPlayerForms.getPlayerForm(targetFormId);
 				if (formBase != null) {
-					TransformManager.immediatelyTransform(player, formBase);
+					// 带黑屏淡入淡出动画变身（startTransform），STUN 在动画期间定身
+					TransformManager.startTransform(player, formBase, null);
 					// 变身演出（黑屏淡入 IN + 淡出 OUT，共 160 tick）期间定身玩家，避免演出过程中走动
 					player.addStatusEffect(new StatusEffectInstance(SscAddon.STUN,
 							StaticParams.TRANSFORM_FX_DURATION_IN + StaticParams.TRANSFORM_FX_DURATION_OUT, 0, false, false, false));

@@ -460,6 +460,14 @@ public class SscAddon implements ModInitializer {
 		RegPlayerForms.registerPlayerForm(upgradeFamiliarFoxForm);
 		RegPlayerForms.registerPlayerFormGroup(new NormalGroup(new Identifier("my_addon", "group_upgrade_familiar_fox")).registerForm(1, 5, upgradeFamiliarFoxForm));
 
+		// 契灵（Mancianima）—— 复用使魔模型/动画，经月髓环/进化石进化获得。
+		// 之前是纯数据驱动(ssc_form json)，但原版新版 DynamicForm 缺 originLayerID 字段会 NPE 致其注册失败消失，
+		// 故改为与其它 SP 形态一致的代码注册（不再依赖数据驱动），模型由 FormID 查 ssc_form_model 自动得到契灵外观。
+		Form_FamiliarFox3 mancianimaForm = new Form_FamiliarFox3(FormIdentifiers.FAMILIAR_FOX_MANCIANIMA);
+		mancianimaForm.formFlag(NoInstinct, NoCursedMoonEffect, SpecialForm, InhibitorImmune);
+		RegPlayerForms.registerPlayerForm(mancianimaForm);
+		RegPlayerForms.registerPlayerFormGroup(new NormalGroup(new Identifier("my_addon", "group_familiar_fox_mancianima")).registerForm(1, 5, mancianimaForm));
+
 		Form_FamiliarFoxRed familiarFoxRedForm = new Form_FamiliarFoxRed(FormIdentifiers.FAMILIAR_FOX_RED);
 		familiarFoxRedForm.formFlag(NoInstinct, NoCursedMoonEffect, SpecialForm, InhibitorImmune);
 		RegPlayerForms.registerPlayerForm(familiarFoxRedForm);

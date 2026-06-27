@@ -4,6 +4,7 @@ import net.minecraft.client.resource.language.I18n;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.sound.SoundCategory;
@@ -15,6 +16,7 @@ import net.onixary.shapeShifterCurseFabric.player_form.IForm;
 import net.onixary.shapeShifterCurseFabric.data.StaticParams;
 import net.onixary.shapeShifterCurseFabric.player_form.RegPlayerForms;
 import net.onixary.shapeShifterCurseFabric.player_form.utils.TransformManager;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionManager;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.AdvancementUtils;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormUtils;
 
@@ -74,6 +76,11 @@ public class EvolutionStoneItem extends Item {
 					targetFormId = new Identifier("my_addon", "familiar_fox_mancianima");
 					canEvolve = true;
 				}
+				// 允许进化使魔（SSCA 路线）使用进化石进化为契灵：需 50 级解锁两分支后才允许（门控在下方）
+				else if (playerFormID.equals(new Identifier("my_addon", "upgrade_familiar_fox"))) {
+					targetFormId = new Identifier("my_addon", "familiar_fox_mancianima");
+					canEvolve = true;
+				}
 				// 允许原版三阶段蝙蝠使用进化石进化为寄生果蝠
 				else if (playerFormID.equals(new Identifier("shape-shifter-curse", "bat_3"))) {
 					targetFormId = new Identifier("my_addon", "bat_parasitic_fruit");
@@ -82,9 +89,18 @@ public class EvolutionStoneItem extends Item {
 			}
 
 			if (canEvolve) {
+				// 进化使魔门控：必须先解锁两个 50 级分支（灵界之主 + 契灵）才能用进化石继续进化
+				if (player instanceof ServerPlayerEntity spStone
+						&& new Identifier("my_addon", "upgrade_familiar_fox").equals(playerFormID)
+						&& !EvolutionManager.canUpgradeFoxEvolve(spStone)) {
+					player.sendMessage(Text.translatable("message.ssc_addon.evolution.fail.branches_locked").formatted(Formatting.RED, Formatting.ITALIC), false);
+					world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.PLAYERS, 1.0F, 1.0F);
+					return stack;
+				}
 				IForm formBase = RegPlayerForms.getPlayerForm(targetFormId);
 				if (formBase != null) {
-					TransformManager.immediatelyTransform(player, formBase);
+					// 带黑屏淡入淡出动画变身（startTransform），STUN 在动画期间定身
+					TransformManager.startTransform(player, formBase, null);
 					// 变身演出（黑屏淡入 IN + 淡出 OUT，共 160 tick）期间定身玩家，避免演出过程中走动
 					player.addStatusEffect(new StatusEffectInstance(SscAddon.STUN,
 							StaticParams.TRANSFORM_FX_DURATION_IN + StaticParams.TRANSFORM_FX_DURATION_OUT, 0, false, false, false));

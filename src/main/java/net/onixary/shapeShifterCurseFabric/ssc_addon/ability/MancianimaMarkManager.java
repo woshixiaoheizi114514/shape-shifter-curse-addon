@@ -349,7 +349,18 @@ public final class MancianimaMarkManager {
 			double curMana = net.onixary.shapeShifterCurseFabric.mana.ManaUtils.getPlayerMana(sp);
 			double maxMana = net.onixary.shapeShifterCurseFabric.mana.ManaUtils.getPlayerMaxMana(sp);
 			if (maxMana <= 0 || curMana >= maxMana) { LAST_MANA_REGEN.put(id, now); continue; }
-			net.onixary.shapeShifterCurseFabric.mana.ManaUtils.gainPlayerMana(sp, UPGRADE_FOX_MANA_REGEN_AMOUNT);
+			// 灵视节点：mana 自动回复速率 +10%
+			double regenAmount = UPGRADE_FOX_MANA_REGEN_AMOUNT;
+			net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionComponent svComp =
+						net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.RegEvolutionComponent.EVOLUTION.get(sp);
+			if (svComp.isUnlocked(net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.FamiliarFoxTree.NODE_SPIRIT_VISION)) {
+				regenAmount *= 1.1;
+			}
+			// 火环节点：mana 自动回复速率 +20%
+			if (svComp.isUnlocked(net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.FamiliarFoxTree.NODE_FIRE_RING)) {
+				regenAmount *= 1.2;
+			}
+			net.onixary.shapeShifterCurseFabric.mana.ManaUtils.gainPlayerMana(sp, regenAmount);
 			LAST_MANA_REGEN.put(id, now);
 		}
 	}

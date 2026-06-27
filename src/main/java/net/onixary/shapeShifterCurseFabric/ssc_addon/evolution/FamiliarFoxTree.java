@@ -11,7 +11,7 @@ import java.util.Map;
  * 使魔（familiar_fox）进化树的硬编码节点表 + 布局（试点路线）。
  *
  * <p>对应 SSCA 进化方案导图：初始形态 → Mana 系统 → 火花/火箭/buff免疫 → 炼药/灵视 → 火环 → 灵界之主/契灵分支。</p>
- * <p><b>前置语义</b>：{@code prereqs} 中【任一】已解锁即满足（OR）。后续如需 AND 可在 EvolutionManager 调整。</p>
+ * <p><b>前置语义</b>：{@code prereqs} 中【全部】已解锁才满足（AND）。</p>
  */
 public final class FamiliarFoxTree {
     public static final String ROUTE_ID = "familiar_fox";

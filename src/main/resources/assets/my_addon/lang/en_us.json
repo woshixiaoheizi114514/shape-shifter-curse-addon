@@ -117,6 +117,7 @@
     "message.ssc_addon.evolution.fail.bad_form":  "Current form is insufficient to carry echoes of older pacts. Evolution refuses to resonate deep within the bloodline; a deeper link cannot be established.",
     "message.ssc_addon.evolution.fail.both":  "The foundation is too shallow, and the cursed rain has not fallen. In this double barrenness, the seedling of evolution has withered irretrievably.",
     "message.ssc_addon.evolution.fail.already_sp":  "Your attempt to establish a deeper link with the moonlight triggered a fatal resonance. Your form rejected evolution and returned the power of the curse—in the violent backlash, you became a brief, shrill echo under this cursed moon.",
+    "message.ssc_addon.evolution.fail.branches_locked":  "The two branches of evolution have not yet fully awakened. Only when the potentials of the Spirit Lord and the Mancianima awaken together within you may evolution proceed.",
     "death.attack.cursed_erosion":  "%1$s was eroded by the power of the Cursed Moon",
     "death.attack.cursed_burst":  "%1$s was burst by the power of the Cursed Moon",
     "codex.status.my_addon.SP_status":  "The Curse and Moonlight have completely synchronized; your soul has fully merged with that power.\nEvery breath you take resonates with the endless moonlight, a source of both power and pain.",

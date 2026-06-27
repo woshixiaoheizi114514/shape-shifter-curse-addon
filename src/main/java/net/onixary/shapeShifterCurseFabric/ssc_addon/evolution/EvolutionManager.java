@@ -32,6 +32,28 @@ public final class EvolutionManager {
         RegEvolutionComponent.EVOLUTION.sync(player);
     }
 
+    /**
+     * 进化使魔进化门控：必须已解锁两个 50 级分支节点（灵界之主 + 契灵），
+     * 才允许使用月髓环 / 进化石从「进化使魔」继续进化到分支形态。
+     *
+     * <p>对非进化使魔形态或不走 SSCA 路线的玩家恒为 true（不施加门控），
+     * 仅在「当前形态为进化使魔」时校验两分支是否都已解锁。</p>
+     */
+    public static boolean canUpgradeFoxEvolve(ServerPlayerEntity player) {
+        IForm nowForm = RegPlayerFormComponent.PLAYER_FORM.get(player).nowForm;
+        Identifier nowFormId = (nowForm == null) ? null : nowForm.getFormID();
+        // 仅对进化使魔形态施加门控；其它形态走原版逻辑，不限制
+        if (!FormIdentifiers.UPGRADE_FAMILIAR_FOX.equals(nowFormId)) {
+            return true;
+        }
+        EvolutionComponent comp = get(player);
+        if (!comp.isOnSscaRoute()) {
+            return false;
+        }
+        return comp.isUnlocked(FamiliarFoxTree.NODE_BRANCH_SPIRIT_LORD)
+                && comp.isUnlocked(FamiliarFoxTree.NODE_BRANCH_MANCIANIMA);
+    }
+
     /** 经验等级里程碑：到达这些等级各发放 1 点（与导图设定一致）。 */
     private static final int[] LEVEL_MILESTONES = {5, 10, 15, 20, 30, 40, 45};
 
@@ -134,17 +156,17 @@ public final class EvolutionManager {
         return true;
     }
 
-    /** 前置语义：节点无前置，或前置中【任一】已解锁（OR）。 */
+    /** 前置语义：节点无前置，或前置中【全部】已解锁才满足（AND）。 */
     private static boolean prereqsMet(EvolutionComponent comp, EvolutionNode node) {
         if (node.prereqs.isEmpty()) {
             return true;
         }
         for (String p : node.prereqs) {
-            if (comp.isUnlocked(p)) {
-                return true;
+            if (!comp.isUnlocked(p)) {
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
     /**
@@ -153,20 +175,38 @@ public final class EvolutionManager {
      */
     public static void tickPlayer(ServerPlayerEntity player) {
         EvolutionComponent comp = get(player);
-        if (!comp.isOnSscaRoute()) {
-            return;
-        }
-        // 变形重置：曾变身进入进化使魔后，若离开该形态（变成任何其它形态），重置全部进化进度。
-        // 用 started 标志避免变身动画期间（route 已设但尚未变成进化使魔）误重置。
         IForm nowForm = RegPlayerFormComponent.PLAYER_FORM.get(player).nowForm;
         Identifier nowFormId = (nowForm == null) ? null : nowForm.getFormID();
         boolean isUpgradeForm = FormIdentifiers.UPGRADE_FAMILIAR_FOX.equals(nowFormId);
+
+        // 成为「进化使魔」即自动进入 SSCA 路线并解锁初始形态节点（base），无需玩家在进化树点击「初始形态」。
+        // 覆盖所有进入进化使魔的途径（开局之书 / 指令等）；放在 isOnSscaRoute 早退之前以便首次自动设路线。
         if (isUpgradeForm) {
+            boolean autoChanged = false;
+            if (!comp.isOnSscaRoute()) {
+                comp.setRoute(FamiliarFoxTree.ROUTE_ID);
+                autoChanged = true;
+            }
+            if (!comp.isUnlocked(FamiliarFoxTree.NODE_BASE)) {
+                comp.unlock(FamiliarFoxTree.NODE_BASE);
+                autoChanged = true;
+            }
             if (!comp.hasStarted()) {
                 comp.markStarted();
+                autoChanged = true;
+            }
+            if (autoChanged) {
                 sync(player);
             }
-        } else if (comp.hasStarted()) {
+        }
+
+        if (!comp.isOnSscaRoute()) {
+            return;
+        }
+
+        // 变形重置：曾变身进入进化使魔后，若离开该形态（变成任何其它形态），重置全部进化进度。
+        // 用 started 标志避免变身动画期间（route 已设但尚未变成进化使魔）误重置。
+        if (!isUpgradeForm && comp.hasStarted()) {
             comp.reset();
             sync(player);
             return;

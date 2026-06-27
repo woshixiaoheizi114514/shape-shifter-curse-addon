@@ -1,8 +1,5 @@
 {
     "type": "apoli:multiple",
-    "hud_render": {
-        "should_render": false
-    },
     "attack_up": {
         "type": "apoli:attribute",
         "modifier": {

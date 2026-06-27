@@ -10,6 +10,8 @@ import net.onixary.shapeShifterCurseFabric.ssc_addon.config.SSCAddonClientConfig
 import net.onixary.shapeShifterCurseFabric.ssc_addon.config.SSCAddonConfig;
 import org.lwjgl.glfw.GLFW;
 
+import java.lang.reflect.Field;
+
 /**
  * SSCA 主动技能键位管理（特殊键位系统核心）。
  *
@@ -30,6 +32,47 @@ public class SscAddonKeybindings {
 
 	private static KeyBinding virtualPrimary;
 	private static KeyBinding virtualSecondary;
+
+	/** 原版 SSC 主动技能键位缓存（反射一次性获取，规避 IDE 对本地 jar 字段索引失效的误报）。 */
+	private static volatile boolean sscKeysResolved = false;
+	private static KeyBinding sscSkill1Key;
+	private static KeyBinding sscSkill2Key;
+
+	/**
+	 * 通过反射获取原版 SSC 主动技能键位绑定，并缓存结果。
+	 *
+	 * <p>原版 {@link ShapeShifterCurseFabricClient} 的 {@code useActiveSkill1/2PowerKeybind}
+	 * 为 public static 字段，附属可直接引用；但 VS Code Java 扩展对本地文件 jar 依赖
+	 * （{@code files("../...jar")}）的字段索引经常失效，导致 IDE 误报
+	 * 「cannot be resolved or is not a field」。改用反射访问可规避该误报，
+	 * 运行时行为与直接引用完全一致（字段确实存在且为 public）。字段缺失时安全降级返回 null。</p>
+	 */
+	private static KeyBinding getSscSkillKey(boolean primary) {
+		if (!sscKeysResolved) {
+			resolveSscSkillKeys();
+		}
+		return primary ? sscSkill1Key : sscSkill2Key;
+	}
+
+	private static synchronized void resolveSscSkillKeys() {
+		if (sscKeysResolved) {
+			return;
+		}
+		try {
+			Class<?> cls = ShapeShifterCurseFabricClient.class;
+			Field f1 = cls.getDeclaredField("useActiveSkill1PowerKeybind");
+			Field f2 = cls.getDeclaredField("useActiveSkill2PowerKeybind");
+			f1.setAccessible(true);
+			f2.setAccessible(true);
+			sscSkill1Key = (KeyBinding) f1.get(null);
+			sscSkill2Key = (KeyBinding) f2.get(null);
+		} catch (Throwable t) {
+			// 原版字段缺失或不可访问：降级为 null，键位检测返回 false
+			sscSkill1Key = null;
+			sscSkill2Key = null;
+		}
+		sscKeysResolved = true;
+	}
 
 	private SscAddonKeybindings() {
 		// This utility class should not be instantiated
@@ -96,9 +139,7 @@ public class SscAddonKeybindings {
 			}
 		}
 		// 同步 SSC：跟随原版主动技能键（active_skill_1/2）
-		KeyBinding sscKey = primary
-				? ShapeShifterCurseFabricClient.useActiveSkill1PowerKeybind
-				: ShapeShifterCurseFabricClient.useActiveSkill2PowerKeybind;
+		KeyBinding sscKey = getSscSkillKey(primary);
 		return sscKey != null && sscKey.isPressed();
 	}
 
@@ -143,7 +184,7 @@ public class SscAddonKeybindings {
 				return isPhysicalKeyDown(entry.secondaryKey);
 			}
 		}
-		KeyBinding ssc = ShapeShifterCurseFabricClient.useActiveSkill2PowerKeybind;
+		KeyBinding ssc = getSscSkillKey(false);
 		return ssc != null && isPhysicalKeyDown(ssc.getBoundKeyTranslationKey());
 	}
 

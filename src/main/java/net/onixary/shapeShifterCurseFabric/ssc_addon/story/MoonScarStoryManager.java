@@ -176,7 +176,8 @@ public final class MoonScarStoryManager {
 		IForm spForm = RegPlayerForms.getPlayerForm(FormIdentifiers.FAMILIAR_FOX_SP);
 		if (spForm == null) return false;
 
-		TransformManager.immediatelyTransform(sp, spForm);
+		// 月髓环免费变回 sp 使魔：带黑屏淡入淡出动画（原 handleDirectTransform(...,false)）
+		TransformManager.startTransform(sp, spForm, null);
 		state.storyRedPlayers.remove(sp.getUuid());
 		state.markDirty();
 
