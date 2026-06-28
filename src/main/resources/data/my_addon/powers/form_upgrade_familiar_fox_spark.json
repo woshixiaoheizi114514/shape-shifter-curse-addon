@@ -138,6 +138,10 @@
         "conditions": [
             {
                 "type": "ssc_addon:has_talent",
+                "talent_id": "spark"
+            },
+            {
+                "type": "ssc_addon:has_talent",
                 "talent_id": "fire_ring",
                 "inverted": true
             },
