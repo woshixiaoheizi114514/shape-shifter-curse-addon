@@ -58,6 +58,10 @@ public class SscAddonNetworking {
 	public static final Identifier PACKET_EVO_UNLOCK_BATCH = new Identifier("my_addon", "evo_unlock_batch");
 	/** C2S：开局选形态界面选定一个 SSCA 进化形态、直接走 SSCA 路线进化。payload: String formId */
 	public static final Identifier PACKET_SSCA_START_ROUTE = new Identifier("my_addon", "ssca_start_route");
+	/** C2S：客机加入后请求服务端把所有在场玩家的形态+皮肤同步过来（修复客机看其它玩家默认白模型）。无 payload */
+	public static final Identifier PACKET_REQUEST_ALL_FORM_SYNC = new Identifier("my_addon", "request_all_form_sync");
+	/** S2C：服务端广播所有在场玩家的形态 ID。payload: int count + count*(UUID + String formId) */
+	public static final Identifier PACKET_BROADCAST_FORMS = new Identifier("my_addon", "broadcast_forms");
 
 	/** C2S 限频：每玩家每个事件类型记录上一次服务端接收时间，防外挂客户端 spam。 */
 	private static final Map<UUID, Long> LAST_WHITELIST_PACKET_TICK = new ConcurrentHashMap<>();
@@ -205,6 +209,41 @@ public class SscAddonNetworking {
 			server.execute(() -> {
 				if (isRateLimited(player)) return;
 				EvolutionManager.startSscaRoute(player, formId);
+			});
+		});
+
+		// 客机加入后请求：把所有在场玩家的形态 ID + 皮肤数据广播给「所有在线玩家」（含请求者与已在线客机），
+		// 绕过 CCA 同步的不确定性，修复刚进游戏 / 新玩家加入时看其它玩家是默认白模型。
+		// 形态模型由客机据 formId 重建 origin 决定，颜色据皮肤数据上色。
+		ServerPlayNetworking.registerGlobalReceiver(PACKET_REQUEST_ALL_FORM_SYNC, (server, player, handler, buf, responseSender) -> {
+			server.execute(() -> {
+				java.util.List<net.minecraft.server.network.ServerPlayerEntity> players = server.getPlayerManager().getPlayerList();
+				for (net.minecraft.server.network.ServerPlayerEntity recipient : players) {
+					net.minecraft.network.PacketByteBuf out = net.fabricmc.fabric.api.networking.v1.PacketByteBufs.create();
+					out.writeInt(players.size());
+					for (net.minecraft.server.network.ServerPlayerEntity p : players) {
+						out.writeUuid(p.getUuid());
+						net.minecraft.util.Identifier fid =
+								net.onixary.shapeShifterCurseFabric.player_form.utils.RegPlayerFormComponent.PLAYER_FORM.get(p).nowFormID;
+						out.writeString(fid == null ? "" : fid.toString());
+						// 皮肤数据：保留原皮 / 是否启用形态颜色 / 五种颜色(ABGR) / 灰度反转 / 随机音效
+						net.onixary.shapeShifterCurseFabric.player_form.skin.PlayerSkinComponent skin =
+								net.onixary.shapeShifterCurseFabric.player_form.skin.RegPlayerSkinComponent.SKIN_SETTINGS.get(p);
+						out.writeBoolean(skin.shouldKeepOriginalSkin());
+						out.writeBoolean(skin.isEnableFormColor());
+						net.onixary.shapeShifterCurseFabric.util.FormTextureUtils.ColorSetting c = skin.getFormColor();
+						out.writeInt(c.getPrimaryColor());
+						out.writeInt(c.getAccentColor1());
+						out.writeInt(c.getAccentColor2());
+						out.writeInt(c.getEyeColorA());
+						out.writeInt(c.getEyeColorB());
+						out.writeBoolean(c.getPrimaryGreyReverse());
+						out.writeBoolean(c.getAccent1GreyReverse());
+						out.writeBoolean(c.getAccent2GreyReverse());
+						out.writeBoolean(skin.isEnableFormRandomSound());
+					}
+					ServerPlayNetworking.send(recipient, PACKET_BROADCAST_FORMS, out);
+				}
 			});
 		});
 	}

@@ -70,6 +70,9 @@
                                         "inverted": true
                                     }
                                 ]
+                            },
+                            {
+                                "type": "my_addon:not_actor_whitelisted"
                             }
                         ]
                     },

@@ -60,7 +60,8 @@
                    "client.SoundManagerDeafenMixin",
                    "client.TransformingControllerFeralAnimMixin",
                    "client.CreativePotionStackMixin",
-                   "client.FamiliarFoxManaBarGateMixin"
+                   "client.FamiliarFoxManaBarGateMixin",
+                   "client.TailVerticalDragFixMixin"
                ],
     "injectors":  {
                       "defaultRequire":  1
