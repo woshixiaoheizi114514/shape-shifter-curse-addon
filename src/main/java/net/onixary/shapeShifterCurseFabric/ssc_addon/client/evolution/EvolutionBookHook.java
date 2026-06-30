@@ -9,7 +9,8 @@ import net.onixary.shapeShifterCurseFabric.ShapeShifterCurseFabric;
 import net.onixary.shapeShifterCurseFabric.custom_ui.BookOfShapeShifterScreenV2_P1;
 import net.onixary.shapeShifterCurseFabric.player_form.IForm;
 import net.onixary.shapeShifterCurseFabric.player_form.utils.RegPlayerFormComponent;
-import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionRegistry;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionRoute;
 
 /**
  * SSCA 进化加点系统 - 在幻形者之书界面内注入「进化加点」入口按钮。
@@ -35,8 +36,9 @@ public final class EvolutionBookHook {
             }
             IForm currentForm = RegPlayerFormComponent.PLAYER_FORM.get(client.player).nowForm;
             Identifier formId = (currentForm == null) ? null : currentForm.getFormID();
-            // 仅「进化使魔」形态显示进化加点入口
-            if (!FormIdentifiers.UPGRADE_FAMILIAR_FOX.equals(formId)) {
+            // 当前形态是某条「已开放」进化路线的起点形态时，显示进化加点入口
+            EvolutionRoute route = EvolutionRegistry.INSTANCE.getRouteByStartForm(formId);
+            if (route == null || !route.enabled) {
                 return;
             }
             // 定位到书内形态模型预览框上方一点。书布局：BookSizeX=350/Y=220，预览框 in-book Pos(35,15) Size(70,66)。

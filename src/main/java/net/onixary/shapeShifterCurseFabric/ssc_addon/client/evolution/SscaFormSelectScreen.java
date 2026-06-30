@@ -14,8 +14,10 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionNode;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionRegistry;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionRoute;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking;
-import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,16 +50,34 @@ public class SscaFormSelectScreen extends Screen {
     }
 
     /**
-     * 开局可选的 SSCA 进化形态列表。
-     * <p>以后新增形态只需在此追加一条（界面会自动支持翻页）。</p>
+     * 开局可选的 SSCA 进化形态列表（数据驱动：来自所有「已开放且有起点形态」的进化路线）。
+     * <p>加新形态只需新增 route JSON，界面自动出现并支持翻页。</p>
      */
-    private static final List<StartForm> FORMS = new ArrayList<>();
-    static {
-        FORMS.add(new StartForm(
-                FormIdentifiers.UPGRADE_FAMILIAR_FOX,
-                Items.FOX_SPAWN_EGG,
-                "origin.my_addon.form_upgrade_familiar_fox.name",
-                "evolution.my_addon.start.form.upgrade_familiar_fox.desc"));
+    private final List<StartForm> forms = new ArrayList<>();
+
+    /** 从已加载的进化路线动态构建可选形态列表。 */
+    private void buildForms() {
+        forms.clear();
+        for (EvolutionRoute route : EvolutionRegistry.INSTANCE.all().values()) {
+            if (!route.enabled || route.startForm == null) {
+                continue;
+            }
+            Identifier fid = route.startForm;
+            String ns = fid.getNamespace();
+            String path = fid.getPath();
+            // 图标取初始节点图标；名称 / 描述按形态 id 推导对应 lang key
+            Item icon = Items.NETHER_STAR;
+            String baseId = route.getBaseNodeId();
+            if (baseId != null) {
+                EvolutionNode baseNode = route.getNode(baseId);
+                if (baseNode != null && baseNode.icon != null) {
+                    icon = baseNode.icon;
+                }
+            }
+            String nameKey = "origin." + ns + ".form_" + path + ".name";
+            String descKey = "evolution." + ns + ".start.form." + path + ".desc";
+            forms.add(new StartForm(fid, icon, nameKey, descKey));
+        }
     }
 
     private static final int PANEL_W = 280;
@@ -82,9 +102,10 @@ public class SscaFormSelectScreen extends Screen {
 
     @Override
     protected void init() {
+        buildForms();
         int px = panelX();
         int py = panelY();
-        boolean multiPage = FORMS.size() > 1;
+        boolean multiPage = forms.size() > 1;
 
         // 翻页按钮（面板两侧中部）；仅有一页时禁用，体现可翻页框架
         ButtonWidget prev = ButtonWidget.builder(Text.literal("<"), b -> prevPage())
@@ -111,24 +132,24 @@ public class SscaFormSelectScreen extends Screen {
     }
 
     private void prevPage() {
-        if (FORMS.isEmpty()) {
+        if (forms.isEmpty()) {
             return;
         }
-        page = (page - 1 + FORMS.size()) % FORMS.size();
+        page = (page - 1 + forms.size()) % forms.size();
     }
 
     private void nextPage() {
-        if (FORMS.isEmpty()) {
+        if (forms.isEmpty()) {
             return;
         }
-        page = (page + 1) % FORMS.size();
+        page = (page + 1) % forms.size();
     }
 
     private void chooseCurrentForm() {
-        if (page < 0 || page >= FORMS.size()) {
+        if (page < 0 || page >= forms.size()) {
             return;
         }
-        StartForm form = FORMS.get(page);
+        StartForm form = forms.get(page);
         PacketByteBuf buf = PacketByteBufs.create();
         buf.writeString(form.formId.toString());
         ClientPlayNetworking.send(SscAddonNetworking.PACKET_SSCA_START_ROUTE, buf);
@@ -149,12 +170,12 @@ public class SscaFormSelectScreen extends Screen {
         // 标题
         ctx.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, py + 10, 0xFFE8C66A);
 
-        if (!FORMS.isEmpty()) {
+        if (!forms.isEmpty()) {
             // 页码
-            Text pageInfo = Text.translatable("evolution.my_addon.start.select.page", page + 1, FORMS.size());
+            Text pageInfo = Text.translatable("evolution.my_addon.start.select.page", page + 1, forms.size());
             ctx.drawCenteredTextWithShadow(this.textRenderer, pageInfo, this.width / 2, py + 24, 0xFFAAAAAA);
 
-            StartForm form = FORMS.get(page);
+            StartForm form = forms.get(page);
 
             // 形态图标（放大）
             int iconCenterX = this.width / 2;

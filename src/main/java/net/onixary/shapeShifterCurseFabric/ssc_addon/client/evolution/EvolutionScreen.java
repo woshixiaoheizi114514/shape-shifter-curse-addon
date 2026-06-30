@@ -15,7 +15,8 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionComponent;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionNode;
-import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.FamiliarFoxTree;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionRegistry;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionRoute;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.RegEvolutionComponent;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking;
 
@@ -103,6 +104,32 @@ public class EvolutionScreen extends Screen {
     private EvolutionComponent getComp() {
         PlayerEntity p = MinecraftClient.getInstance().player;
         return p == null ? null : RegEvolutionComponent.EVOLUTION.get(p);
+    }
+
+    /** 当前玩家所在的进化路线（优先玩家已选路线，其次当前形态对应路线）。 */
+    private EvolutionRoute route() {
+        EvolutionComponent comp = getComp();
+        String rid = (comp == null) ? null : comp.getRoute();
+        if (rid == null || rid.isEmpty()) {
+            PlayerEntity p = MinecraftClient.getInstance().player;
+            net.onixary.shapeShifterCurseFabric.player_form.IForm f =
+                    (p == null) ? null : net.onixary.shapeShifterCurseFabric.player_form.utils.RegPlayerFormComponent.PLAYER_FORM.get(p).nowForm;
+            Identifier fid = (f == null) ? null : f.getFormID();
+            return EvolutionRegistry.INSTANCE.getRouteByStartForm(fid);
+        }
+        return EvolutionRegistry.INSTANCE.getRoute(rid);
+    }
+
+    /** 当前路线全部节点（未加载时返回空列表）。 */
+    private java.util.List<EvolutionNode> nodes() {
+        EvolutionRoute r = route();
+        return r == null ? java.util.List.of() : r.nodes;
+    }
+
+    /** 按 id 取当前路线的节点（未加载 / 不存在时为 null）。 */
+    private EvolutionNode node(String id) {
+        EvolutionRoute r = route();
+        return r == null ? null : r.getNode(id);
     }
 
     @Override
@@ -199,7 +226,7 @@ public class EvolutionScreen extends Screen {
     private int pendingCost() {
         int sum = 0;
         for (String id : pending) {
-            EvolutionNode n = FamiliarFoxTree.get(id);
+            EvolutionNode n = node(id);
             if (n != null) sum += n.cost;
         }
         return sum;
@@ -260,7 +287,7 @@ public class EvolutionScreen extends Screen {
         // 节点
         EvolutionNode hovered = null;
         if (comp != null) {
-            for (EvolutionNode node : FamiliarFoxTree.nodes()) {
+            for (EvolutionNode node : nodes()) {
                 boolean unlocked = comp.isUnlocked(node.id);
                 boolean staged = pending.contains(node.id);
                 boolean canUn = canUn(comp, node);
@@ -319,9 +346,9 @@ public class EvolutionScreen extends Screen {
 
     private void drawConnections(DrawContext ctx, EvolutionComponent comp) {
         if (comp == null) return;
-        for (EvolutionNode node : FamiliarFoxTree.nodes()) {
+        for (EvolutionNode node : nodes()) {
             for (String pid : node.prereqs) {
-                EvolutionNode pre = FamiliarFoxTree.get(pid);
+                EvolutionNode pre = node(pid);
                 if (pre == null) continue;
                 boolean active = comp.isUnlocked(pid);
                 boolean staged = !active && pending.contains(pid);
@@ -513,20 +540,25 @@ public class EvolutionScreen extends Screen {
 
         if (comp != null && comp.isOnSscaRoute()) {
             int unlocked = 0;
-            for (EvolutionNode n : FamiliarFoxTree.nodes()) {
+            for (EvolutionNode n : nodes()) {
                 if (comp.isUnlocked(n.id)) unlocked++;
             }
-            int total = FamiliarFoxTree.nodes().size();
+            int total = nodes().size();
             Text prog = Text.translatable("evolution.my_addon.screen.progress", unlocked, total);
             ctx.drawTextWithShadow(this.textRenderer, prog, 12, y0 + 13, TXT_GOLD);
 
             int level = MinecraftClient.getInstance().player != null
                     ? MinecraftClient.getInstance().player.experienceLevel : 0;
-            boolean spiritLord = comp.isUnlocked(FamiliarFoxTree.NODE_BRANCH_SPIRIT_LORD);
-            boolean mancia = comp.isUnlocked(FamiliarFoxTree.NODE_BRANCH_MANCIANIMA);
+            EvolutionRoute br = route();
+            boolean allBranch = br != null && !br.getBranchNodeIds().isEmpty();
+            if (br != null) {
+                for (String bn : br.getBranchNodeIds()) {
+                    if (!comp.isUnlocked(bn)) { allBranch = false; break; }
+                }
+            }
             Text right;
             int rightColor;
-            if (spiritLord && mancia) {
+            if (allBranch) {
                 right = Text.translatable("evolution.my_addon.screen.branch_ready");
                 rightColor = TITLE_GOLD;
             } else {
@@ -621,7 +653,7 @@ public class EvolutionScreen extends Screen {
                 List<String> names = new ArrayList<>();
                 for (String pid : node.prereqs) {
                     if (!comp.isUnlocked(pid)) {
-                        EvolutionNode pn = FamiliarFoxTree.get(pid);
+                        EvolutionNode pn = node(pid);
                         if (pn != null) names.add(Text.translatable(pn.nameKey).getString());
                     }
                 }
@@ -655,10 +687,11 @@ public class EvolutionScreen extends Screen {
             }
             EvolutionComponent comp = getComp();
             if (comp != null) {
-                for (EvolutionNode node : FamiliarFoxTree.nodes()) {
+                EvolutionRoute clickRoute = route();
+                for (EvolutionNode node : nodes()) {
                     if (!inNode(mouseX, mouseY, node)) continue;
-                    if (!comp.isOnSscaRoute() && FamiliarFoxTree.NODE_BASE.equals(node.id)) {
-                        sendString(SscAddonNetworking.PACKET_EVO_SELECT_ROUTE, FamiliarFoxTree.ROUTE_ID);
+                    if (!comp.isOnSscaRoute() && clickRoute != null && node.id.equals(clickRoute.getBaseNodeId())) {
+                        sendString(SscAddonNetworking.PACKET_EVO_SELECT_ROUTE, clickRoute.routeId);
                         return true;
                     }
                     // 已暂存：再次点击取消（退还点数）
