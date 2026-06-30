@@ -10,6 +10,8 @@
   "model": "my_addon:geo/form_feral_cat_sp.geo.json",
   "texture": "my_addon:textures/form_wild_cat_sp/form_wild_cat_sp.png",
   "texture_mask": "my_addon:textures/form_wild_cat_sp/form_wild_cat_sp_colormask.png",
+  "fullbright_texture": "my_addon:textures/form_wild_cat_sp/form_wild_cat_sp_emission.png",
+  "fullbright_texture_mask": "my_addon:textures/form_wild_cat_sp/form_wild_cat_sp_emission_colormask.png",
   "hidden": [
     "leftLeg",
     "rightLeg",
