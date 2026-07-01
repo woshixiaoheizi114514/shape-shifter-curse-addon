@@ -537,12 +537,16 @@ public class SscAddon implements ModInitializer {
 		// 吸血蝙蝠（Desmodus）SP形态 - 复用蝙蝠模型/动画，经月髓环在诅咒之月夜进化获得
 		Form_BatDesmodus batDesmodusForm = new Form_BatDesmodus(FormIdentifiers.BAT_DESMODUS);
 		batDesmodusForm.formFlag(NoInstinct, NoCursedMoonEffect, SpecialForm, InhibitorImmune, HasSlowFall);
+		// 蝙蝠缩放需与原版 bat_3 一致（宽度/高度0.5、眼睛/碰撞箱0.6），否则保持上个形态大小不缩放
+		batDesmodusForm.applyScaleFunc(NormalForm.NORMAL_SCALE_FUNC_BUILDER.apply(0.5f, 0.6f));
 		RegPlayerForms.registerPlayerForm(batDesmodusForm);
 		RegPlayerForms.registerPlayerFormGroup(new NormalGroup(new Identifier("my_addon", "group_bat_desmodus")).registerForm(1, 12, batDesmodusForm));
 
 		// 寄生果蝠 - 原版三阶段蝙蝠使用进化石进化获得，复用蝙蝠模型/动画
 		Form_BatParasiticFruit batParasiticFruitForm = new Form_BatParasiticFruit(FormIdentifiers.BAT_PARASITIC_FRUIT);
 		batParasiticFruitForm.formFlag(NoInstinct, NoCursedMoonEffect, SpecialForm, InhibitorImmune, HasSlowFall);
+		// 蝙蝠缩放需与原版 bat_3 一致（宽度/高度0.5、眼睛/碰撞箱0.6），否则保持上个形态大小不缩放
+		batParasiticFruitForm.applyScaleFunc(NormalForm.NORMAL_SCALE_FUNC_BUILDER.apply(0.5f, 0.6f));
 		RegPlayerForms.registerPlayerForm(batParasiticFruitForm);
 		RegPlayerForms.registerPlayerFormGroup(new NormalGroup(new Identifier("my_addon", "group_bat_parasitic_fruit")).registerForm(1, 12, batParasiticFruitForm));
 	}
