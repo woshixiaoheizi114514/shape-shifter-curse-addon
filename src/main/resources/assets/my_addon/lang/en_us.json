@@ -732,7 +732,7 @@
     "power.my_addon.form_axolotl_fluorescent_fall_immunity.name": "Membrane Descent",
     "power.my_addon.form_axolotl_fluorescent_fall_immunity.description": "Immune to fall damage.",
     "power.my_addon.form_axolotl_fluorescent_armor_restrict.name": "Fragile Body",
-    "power.my_addon.form_axolotl_fluorescent_armor_restrict.description": "Cannot wear heavy armor (iron / diamond / netherite); only leather / gold / chainmail allowed.",
+    "power.my_addon.form_axolotl_fluorescent_armor_restrict.description": "Cannot wear diamond or netherite armor. Shaped armor (MorphScale) and all other armor can be worn normally.",
     "power.my_addon.form_axolotl_fluorescent_moisture_drain.name": "Moisture Drain",
     "power.my_addon.form_axolotl_fluorescent_moisture_drain.description": "Lose 1% moisture (air) per second on the ground.",
     "power.my_addon.form_axolotl_fluorescent_dehydration.name": "Dehydration",

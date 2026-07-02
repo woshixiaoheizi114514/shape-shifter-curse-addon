@@ -3,6 +3,7 @@ package net.onixary.shapeShifterCurseFabric.ssc_addon.entity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.damage.DamageType;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
@@ -10,10 +11,13 @@ import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -55,7 +59,8 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
     private static final int ATTRACT_ACTIVE_TICKS = 3;      // 0.15 秒吸附作用
     private static final int ATTRACT_INTERVAL_TICKS = 17;   // 0.85 秒间隔
     private static final int ATTRACT_TOTAL_TIMES = 6;       // 共 6 次
-    private static final double PULL_STRENGTH = 0.18;       // 单次吸附位移力度（不宜过大但有明显位移）
+    private static final double PULL_STRENGTH = 0.36;       // 单次吸附位移力度（×2，明显位移但不爆冲）
+    private static final float PULL_PHYSICAL_DAMAGE = 4.0f; // 每次吸附范围内造成 4 点物理伤害
 
     // ===== 消失延迟 =====
     private static final int POP_DELAY_TICKS = 7;           // 0.35 秒后破裂
@@ -236,15 +241,17 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
         }
     }
 
-    /** 单次吸附：把半径 5 内非白名单生物向球拉，施加 15% 减速 + 脚底粒子。 */
+    /** 单次吸附：把半径 5 内非白名单生物向球拉，施加 15% 减速 + 4 物理伤害 + 脚底粒子。 */
     private void applyPull(ServerWorld sw) {
         Box box = new Box(getX() - ATTRACT_RADIUS, getY() - ATTRACT_RADIUS, getZ() - ATTRACT_RADIUS,
                 getX() + ATTRACT_RADIUS, getY() + ATTRACT_RADIUS, getZ() + ATTRACT_RADIUS);
         List<LivingEntity> targets = sw.getEntitiesByClass(LivingEntity.class, box,
                 e -> e.isAlive() && !e.isSpectator() && e.squaredDistanceTo(getX(), getY(), getZ()) <= ATTRACT_RADIUS * ATTRACT_RADIUS);
         ServerPlayerEntity owner = getOwner(sw);
+        // 物理伤害来源（mob_attack，归属主人）
+        RegistryKey<DamageType> dmgKey = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, new Identifier("minecraft", "mob_attack"));
         for (LivingEntity t : targets) {
-            // 白名单 / 主人豁免
+            // 白名单 / 主人豁免（伤害与吸附均豁免）
             if (owner != null && WhitelistUtils.isProtected(owner, t)) continue;
             if (t.getUuid().equals(ownerUuid)) continue;
             // 拉向球：方向 × 力度
@@ -260,6 +267,10 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
             try {
                 t.addStatusEffect(new StatusEffectInstance(SscAddon.TIDAL_SLOW, 30, 0, false, true, true));
             } catch (Throwable ignored) {
+            }
+            // 4 点物理伤害（归属主人）
+            if (owner != null) {
+                t.damage(t.getDamageSources().create(dmgKey, owner, owner), PULL_PHYSICAL_DAMAGE);
             }
             // 脚底青蓝粒子提示
             spawnAffectedFootParticles(sw, t);

@@ -766,7 +766,7 @@
     "power.my_addon.form_axolotl_fluorescent_fall_immunity.name": "黏膜缓降",
     "power.my_addon.form_axolotl_fluorescent_fall_immunity.description": "免疫坠落伤害。",
     "power.my_addon.form_axolotl_fluorescent_armor_restrict.name": "脆弱身躯",
-    "power.my_addon.form_axolotl_fluorescent_armor_restrict.description": "无法穿戴重型护甲（铁/钻石/下界合金），仅可穿戴皮革/金/链甲。",
+    "power.my_addon.form_axolotl_fluorescent_armor_restrict.description": "无法穿戴钻石与下界合金护甲，塑形甲及其它护甲均可正常穿戴。",
     "power.my_addon.form_axolotl_fluorescent_moisture_drain.name": "潮湿度消耗",
     "power.my_addon.form_axolotl_fluorescent_moisture_drain.description": "在地面时每秒消耗1%潮湿度（氧气）。",
     "power.my_addon.form_axolotl_fluorescent_dehydration.name": "脱水",
