@@ -1,0 +1,10 @@
+{
+    "type": "apoli:invulnerability",
+    "damage_condition": {
+        "type": "apoli:name",
+        "name": "fall",
+        "comparison": "=="
+    },
+    "name": "Slime Membrane",
+    "description": "Immune to fall damage."
+}

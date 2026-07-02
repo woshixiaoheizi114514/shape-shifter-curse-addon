@@ -1,0 +1,5 @@
+{
+    "type": "apoli:multiple",
+    "name": "Slime Membrane Dodge",
+    "description": "20% chance to completely dodge physical attacks (melee / projectiles). Triggers water splash feedback."
+}

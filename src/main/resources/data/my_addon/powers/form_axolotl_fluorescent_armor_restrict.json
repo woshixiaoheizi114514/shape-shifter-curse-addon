@@ -1,0 +1,36 @@
+{
+    "type": "apoli:restrict_armor",
+    "chest": {
+        "type": "apoli:or",
+        "conditions": [
+            { "type": "apoli:ingredient", "ingredient": { "item": "minecraft:leather_chestplate" } },
+            { "type": "apoli:ingredient", "ingredient": { "item": "minecraft:golden_chestplate" } },
+            { "type": "apoli:ingredient", "ingredient": { "item": "minecraft:chainmail_chestplate" } },
+            { "type": "apoli:ingredient", "ingredient": { "item": "minecraft:elytra" } },
+            { "type": "apoli:ingredient", "ingredient": { "tag": "shape-shifter-curse:ignore_armor_restriction" } }
+        ],
+        "inverted": true
+    },
+    "legs": {
+        "type": "apoli:or",
+        "conditions": [
+            { "type": "apoli:ingredient", "ingredient": { "item": "minecraft:leather_leggings" } },
+            { "type": "apoli:ingredient", "ingredient": { "item": "minecraft:golden_leggings" } },
+            { "type": "apoli:ingredient", "ingredient": { "item": "minecraft:chainmail_leggings" } },
+            { "type": "apoli:ingredient", "ingredient": { "tag": "shape-shifter-curse:ignore_armor_restriction" } }
+        ],
+        "inverted": true
+    },
+    "feet": {
+        "type": "apoli:or",
+        "conditions": [
+            { "type": "apoli:ingredient", "ingredient": { "item": "minecraft:leather_boots" } },
+            { "type": "apoli:ingredient", "ingredient": { "item": "minecraft:golden_boots" } },
+            { "type": "apoli:ingredient", "ingredient": { "item": "minecraft:chainmail_boots" } },
+            { "type": "apoli:ingredient", "ingredient": { "tag": "shape-shifter-curse:ignore_armor_restriction" } }
+        ],
+        "inverted": true
+    },
+    "name": "Fragile Body",
+    "description": "Cannot wear heavy armor (iron / diamond / netherite). Only leather / gold / chainmail allowed."
+}

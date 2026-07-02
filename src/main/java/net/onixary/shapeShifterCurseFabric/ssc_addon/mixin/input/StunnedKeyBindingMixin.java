@@ -58,7 +58,6 @@ public class StunnedKeyBindingMixin {
 		if (client == null || client.player == null) {
 			return false;
 		}
-		// STUN / 装死期间锁输入；此外变身黑屏过渡期间也锁输入——
 		// 原版 startTransform 黑屏期本就不冻结移动（无移动 mixin，仅靠 TransformOverlay 黑屏遮挡视野），
 		// 故原版催化剂/抑制剂/诅咒之月等触发的变身过渡中玩家仍能 WASD 走动。
 		// TransformManager.transformTimer 是客户端 public 字段，黑屏过渡期间 >=0
@@ -66,6 +65,25 @@ public class StunnedKeyBindingMixin {
 		return client.player.hasStatusEffect(SscAddon.STUN)
 				|| client.player.hasStatusEffect(SscAddon.PLAYING_DEAD)
 				|| TransformManager.transformTimer >= 0;
+	}
+
+	@Unique
+	private boolean isMovementKey(String key) {
+		return key.equals("key.forward") || key.equals("key.back")
+				|| key.equals("key.left") || key.equals("key.right")
+				|| key.equals("key.jump") || key.equals("key.sneak") || key.equals("key.sprint");
+	}
+
+	@Unique
+	private boolean isPlayerRooted() {
+		// ROOTED：只锁移动/跳跃（不锁视角/技能键），荧光幼灵法阵激光蓄力/释放期使用
+		MinecraftClient client = MinecraftClient.getInstance();
+		return client != null && client.player != null && client.player.hasStatusEffect(SscAddon.ROOTED);
+	}
+
+	@Unique
+	private boolean shouldBlock(String key) {
+		return (isTargetKey(key) && isPlayerStunned()) || (isMovementKey(key) && isPlayerRooted());
 	}
 
 	@Inject(method = "wasPressed", at = @At("HEAD"), cancellable = true)
@@ -77,6 +95,9 @@ public class StunnedKeyBindingMixin {
 			// Clear any buffered input so it doesn't trigger later
 			this.timesPressed = 0;
 			cir.setReturnValue(false);
+		} else if (isMovementKey(key) && isPlayerRooted()) {
+			this.timesPressed = 0;
+			cir.setReturnValue(false);
 		}
 	}
 
@@ -85,7 +106,7 @@ public class StunnedKeyBindingMixin {
 		KeyBinding binding = (KeyBinding) (Object) this;
 		String key = binding.getTranslationKey();
 
-		if (isTargetKey(key) && isPlayerStunned()) {
+		if (shouldBlock(key)) {
 			cir.setReturnValue(false);
 		}
 	}
@@ -96,7 +117,7 @@ public class StunnedKeyBindingMixin {
 		String key = binding.getTranslationKey();
 
 		// If trying to press the key (pressed=true) while stunned, block it AND ensure internal state is false
-		if (pressed && isTargetKey(key) && isPlayerStunned()) {
+		if (pressed && shouldBlock(key)) {
 			this.pressed = false;
 			ci.cancel();
 		}
@@ -107,7 +128,7 @@ public class StunnedKeyBindingMixin {
 		KeyBinding binding = (KeyBinding) (Object) this;
 		String translationKey = binding.getTranslationKey();
 
-		if (isTargetKey(translationKey) && isPlayerStunned()) {
+		if (shouldBlock(translationKey)) {
 			cir.setReturnValue(false);
 		}
 	}
@@ -117,7 +138,7 @@ public class StunnedKeyBindingMixin {
 		KeyBinding binding = (KeyBinding) (Object) this;
 		String translationKey = binding.getTranslationKey();
 
-		if (isTargetKey(translationKey) && isPlayerStunned()) {
+		if (shouldBlock(translationKey)) {
 			cir.setReturnValue(false);
 		}
 	}

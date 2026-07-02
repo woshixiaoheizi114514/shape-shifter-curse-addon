@@ -28,6 +28,7 @@ import net.onixary.shapeShifterCurseFabric.ssc_addon.client.mana.SnowFoxSPManaBa
 import net.onixary.shapeShifterCurseFabric.ssc_addon.client.mana.MancianimaResistanceBar;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.client.hud.SkillCooldownBarRenderer;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.client.renderer.WaterSpearEntityRenderer;
+import net.onixary.shapeShifterCurseFabric.ssc_addon.client.renderer.FluorescentLaserRenderer;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.client.renderer.WitchFamiliarRenderer;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.client.screen.PotionBagScreen;
 import org.slf4j.Logger;
@@ -285,6 +286,10 @@ public class SscAddonClient implements ClientModInitializer {
 		EntityRendererRegistry.register(SscAddon.INFECTION_SPORE_BOMB_ENTITY, FlyingItemEntityRenderer::new);
 		EntityRendererRegistry.register(SscAddon.PARASITIC_SEED_ENTITY, FlyingItemEntityRenderer::new);
 		EntityRendererRegistry.register(SscAddon.WITCH_FAMILIAR_ENTITY, WitchFamiliarRenderer::new);
+		// 荧光幼灵：潮汐球用 FlyingItemEntityRenderer 渲染潮涌方块作发光核心（对齐 red 火球标准）；
+		// 法阵激光用自定义渲染器画发光法阵 + 穿墙光柱（自发光、粗彩带）
+		EntityRendererRegistry.register(SscAddon.TIDAL_ORB_ENTITY, ctx -> new net.minecraft.client.render.entity.FlyingItemEntityRenderer<>(ctx, 1.0F, false));
+		EntityRendererRegistry.register(SscAddon.LASER_BEAM_ENTITY, FluorescentLaserRenderer::new);
 
 		// 寄生果蝠形态种子量能量条 HUD
 		SeedEnergyHudRenderer.register();
@@ -339,6 +344,8 @@ public class SscAddonClient implements ClientModInitializer {
 
 		// SSCA 美西螈漩涡蓄力 - 按键检测器
 		VortexChargeClient.register();
+		// 荧光幼灵技能按键检测器（主要=潮汐波动 / 次要=水盾）
+		FluorescentKeyClient.register();
 
 		// SSCA 进化加点系统 - 在幻形者之书界面注入「进化加点」入口按钮（使魔形态显示）
 		net.onixary.shapeShifterCurseFabric.ssc_addon.client.evolution.EvolutionBookHook.register();

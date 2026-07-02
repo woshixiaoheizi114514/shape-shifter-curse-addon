@@ -142,6 +142,8 @@ public final class VortexChargeManager {
 		Box box = player.getBoundingBox().expand(RADIUS);
 		for (Entity e : sw.getOtherEntities(player, box)) {
 			if (e instanceof LivingEntity living) {
+				// 默认白名单：豁免玩家/宠物/白名单个体，不受涡流冲击伤害与控制
+				if (net.onixary.shapeShifterCurseFabric.ssc_addon.util.WhitelistUtils.isProtected(player, living)) continue;
 				living.damage(player.getDamageSources().mobAttack(player), damage); // 物理
 				living.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 80, 2));
 				Vec3d push = living.getPos().subtract(player.getPos());

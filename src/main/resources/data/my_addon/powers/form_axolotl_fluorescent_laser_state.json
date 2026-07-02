@@ -1,0 +1,11 @@
+{
+    "type": "apoli:resource",
+    "min": 0,
+    "max": 3,
+    "start_value": 0,
+    "hud_render": {
+        "should_render": false
+    },
+    "name": "Laser State",
+    "description": "Internal state for Array Laser skill (0=idle, 1=charging, 2=firing, 3=fading)."
+}

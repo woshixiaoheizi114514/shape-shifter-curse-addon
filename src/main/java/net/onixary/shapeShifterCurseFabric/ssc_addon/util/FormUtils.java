@@ -72,6 +72,11 @@ public class FormUtils {
 		return isForm(entity, FormIdentifiers.AXOLOTL_SP);
 	}
 
+	/** 荧光幼灵（Axolotl Fluorescent）形态判断。 */
+	public static boolean isAxolotlFluorescent(LivingEntity entity) {
+		return isForm(entity, FormIdentifiers.AXOLOTL_FLUORESCENT);
+	}
+
 	public static boolean isAnubisWolfSP(LivingEntity entity) {
 		return isForm(entity, FormIdentifiers.ANUBIS_WOLF_SP);
 	}

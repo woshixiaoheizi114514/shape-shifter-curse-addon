@@ -95,6 +95,7 @@ public class SscAddon implements ModInitializer {
 	public static final StatusEffect TRUE_INVISIBILITY = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.TrueInvisibilityEffect();
 	public static final StatusEffect PRE_INVISIBILITY = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.PreInvisibilityEffect();
 	public static final StatusEffect STUN = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.StunEffect();
+	public static final StatusEffect ROOTED = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.RootedEffect();
 	public static final StatusEffect GUARANTEED_CRIT = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.GuaranteedCritEffect();
 	public static final StatusEffect FROST_FREEZE = new FrostFreezeEffect();
 	public static final StatusEffect FROST_FALL = new FrostFallEffect();
@@ -109,6 +110,8 @@ public class SscAddon implements ModInitializer {
 	public static final StatusEffect SAND_BLIND = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.SandBlindEffect();
 	// 失聪：客机 SoundManagerDeafenMixin 据此静音受影响玩家自身的所有声音
 	public static final StatusEffect DEAFEN = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.DeafenEffect();
+	// 潮汐波动吸附减速（荧光幼灵）- 15% 移速降低
+	public static final StatusEffect TIDAL_SLOW = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.TidalSlowEffect();
 	/** 侵蚀烙印标记效果 - 1层(黄色) */
 	public static final StatusEffect EROSION_BRAND_MARKER_1 = new net.onixary.shapeShifterCurseFabric.ssc_addon.effect.ErosionBrandMarkerEffect(0xFFD700);
 	/** 侵蚀烙印标记效果 - 2层(橙色) */
@@ -158,6 +161,24 @@ public class SscAddon implements ModInitializer {
 			FabricEntityTypeBuilder.<FrostStormEntity>create(SpawnGroup.MISC, FrostStormEntity::new)
 					.dimensions(EntityDimensions.fixed(1.0f, 2.0f))
 					.trackRangeBlocks(64).trackedUpdateRate(10)
+					.build()
+	);
+	// 荧光幼灵 - 潮汐波动粒子球实体
+	public static final EntityType<net.onixary.shapeShifterCurseFabric.ssc_addon.entity.TidalOrbEntity> TIDAL_ORB_ENTITY = Registry.register(
+			Registries.ENTITY_TYPE,
+			new Identifier("ssc_addon", "tidal_orb"),
+			FabricEntityTypeBuilder.<net.onixary.shapeShifterCurseFabric.ssc_addon.entity.TidalOrbEntity>create(SpawnGroup.MISC, net.onixary.shapeShifterCurseFabric.ssc_addon.entity.TidalOrbEntity::new)
+					.dimensions(EntityDimensions.fixed(0.5f, 0.5f))
+					.trackRangeBlocks(64).trackedUpdateRate(1)
+					.build()
+	);
+	// 荧光幼灵 - 法阵激光实体
+	public static final EntityType<net.onixary.shapeShifterCurseFabric.ssc_addon.entity.LaserBeamEntity> LASER_BEAM_ENTITY = Registry.register(
+			Registries.ENTITY_TYPE,
+			new Identifier("ssc_addon", "laser_beam"),
+			FabricEntityTypeBuilder.<net.onixary.shapeShifterCurseFabric.ssc_addon.entity.LaserBeamEntity>create(SpawnGroup.MISC, net.onixary.shapeShifterCurseFabric.ssc_addon.entity.LaserBeamEntity::new)
+					.dimensions(EntityDimensions.fixed(0.5f, 0.5f))
+					.trackRangeBlocks(96).trackedUpdateRate(1)
 					.build()
 	);
 	public static final Item SP_UPGRADE_THING = new SpUpgradeItem(new Item.Settings().maxCount(1));
@@ -350,6 +371,7 @@ public class SscAddon implements ModInitializer {
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "true_invisibility"), TRUE_INVISIBILITY);
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "pre_invisibility"), PRE_INVISIBILITY);
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "stun"), STUN);
+		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "rooted"), ROOTED);
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "guaranteed_crit"), GUARANTEED_CRIT);
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "frost_freeze"), FROST_FREEZE);
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "frost_fall"), FROST_FALL);
@@ -364,6 +386,7 @@ public class SscAddon implements ModInitializer {
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "erosion_brand_marker_1"), EROSION_BRAND_MARKER_1);
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "erosion_brand_marker_2"), EROSION_BRAND_MARKER_2);
 		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "erosion_brand_marker_3"), EROSION_BRAND_MARKER_3);
+		Registry.register(Registries.STATUS_EFFECT, new Identifier("ssc_addon", "tidal_slow"), TIDAL_SLOW);
 	}
 
 	private void registerItems() {
@@ -454,6 +477,14 @@ public class SscAddon implements ModInitializer {
 		axolotlForm.applyScaleFunc(NormalForm.NORMAL_SCALE_FUNC_BUILDER.apply(1.0f, 1.0f));
 		RegPlayerForms.registerPlayerForm(axolotlForm);
 		RegPlayerForms.registerPlayerFormGroup(new NormalGroup(new Identifier("my_addon", "group_axolotl_sp")).registerForm(1, 5, axolotlForm));
+
+		// 荧光幼灵（Axolotl Fluorescent）- SP美西螈经进化石进化获得，复用美西螈模型/动画，体型缩小到 0.75
+		Form_AxolotlFluorescent fluorescentForm = new Form_AxolotlFluorescent(FormIdentifiers.AXOLOTL_FLUORESCENT);
+		fluorescentForm.formFlag(NoInstinct, NoCursedMoonEffect, SpecialForm, InhibitorImmune);
+		// 体型等比缩小到 0.75（宽高/眼高/碰撞箱一致），兜底清除变身前残留缩放
+		fluorescentForm.applyScaleFunc(NormalForm.NORMAL_SCALE_FUNC_BUILDER.apply(0.75f, 0.75f));
+		RegPlayerForms.registerPlayerForm(fluorescentForm);
+		RegPlayerForms.registerPlayerFormGroup(new NormalGroup(new Identifier("my_addon", "group_axolotl_fluorescent")).registerForm(1, 5, fluorescentForm));
 
 		Form_FamiliarFox3 familiarFoxForm = new Form_FamiliarFox3(FormIdentifiers.FAMILIAR_FOX_SP);
 		familiarFoxForm.formFlag(NoInstinct, NoCursedMoonEffect, SpecialForm, InhibitorImmune);
@@ -596,12 +627,19 @@ public class SscAddon implements ModInitializer {
 				GoldenSandstormRegen.tick(player);
 				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.BatDesmodusBloodThirst.tick(player);
 				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.MancianimaPassive.tick(player);
-				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexChargeManager.tick(player);
-				net.onixary.shapeShifterCurseFabric.ssc_addon.ability.PlayDeadAbsorptionManager.tick(player);
-				net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionManager.tickPlayer(player);
-			}
-		});
-	}
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexChargeManager.tick(player);
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.PlayDeadAbsorptionManager.tick(player);
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.FluorescentTidalManager.tick(player);
+			net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionManager.tickPlayer(player);
+		}
+	});
+
+	// END_SERVER_TICK：荧光幼灵技能 pendingCd 补设（球/盾消失后回调无法直接拿到 player）
+	net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> {
+		java.util.Collection<net.minecraft.server.network.ServerPlayerEntity> players = server.getPlayerManager().getPlayerList();
+		net.onixary.shapeShifterCurseFabric.ssc_addon.ability.FluorescentTidalManager.tickPendingCd(players);
+	});
+}
 
 	/**
 	 * 兜底：清除残留的「定身(STUN)」攻击力/移速孤儿属性修正。

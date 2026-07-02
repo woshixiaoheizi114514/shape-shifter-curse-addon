@@ -1,0 +1,18 @@
+{
+    "type": "apoli:action_over_time",
+    "interval": 20,
+    "entity_action": {
+        "type": "apoli:gain_air",
+        "value": -3
+    },
+    "condition": {
+        "type": "apoli:and",
+        "conditions": [
+            { "type": "apoli:on_block" },
+            { "type": "apoli:submerged_in", "fluid": "water", "inverted": true },
+            { "type": "apoli:in_rain", "inverted": true }
+        ]
+    },
+    "name": "Moisture Drain",
+    "description": "On the ground, lose 1% moisture (air) per second. Moisture drops cause dehydration damage."
+}

@@ -47,6 +47,12 @@ public class SscAddonNetworking {
 	/** C2S：美西螈漩涡释放（提前释放）。无 payload。 */
 	public static final Identifier PACKET_VORTEX_RELEASE = new Identifier("my_addon", "vortex_release");
 
+	// ===== 荧光幼灵技能网络包 =====
+	/** C2S：荧光幼灵主要技能（法阵激光）按键。无 payload。 */
+	public static final Identifier PACKET_FLUO_LASER = new Identifier("my_addon", "fluo_laser_key");
+	/** C2S：荧光幼灵次要技能（潮汐波动）按键。无 payload。 */
+	public static final Identifier PACKET_FLUO_TIDAL = new Identifier("my_addon", "fluo_tidal_key");
+
 	// ===== SSCA 进化加点系统网络包（框架） =====
 	/** C2S：玩家选择进化路线。payload: String routeId */
 	public static final Identifier PACKET_EVO_SELECT_ROUTE = new Identifier("my_addon", "evo_select_route");
@@ -168,6 +174,14 @@ public class SscAddonNetworking {
 		});
 		ServerPlayNetworking.registerGlobalReceiver(PACKET_VORTEX_RELEASE, (server, player, handler, buf, responseSender) -> {
 			server.execute(() -> net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexChargeManager.release(player));
+		});
+
+		// 荧光幼灵技能按键：主要（法阵激光）/ 次要（潮汐波动）
+		ServerPlayNetworking.registerGlobalReceiver(PACKET_FLUO_LASER, (server, player, handler, buf, responseSender) -> {
+			server.execute(() -> net.onixary.shapeShifterCurseFabric.ssc_addon.ability.FluorescentLaserManager.onKeyPress(player));
+		});
+		ServerPlayNetworking.registerGlobalReceiver(PACKET_FLUO_TIDAL, (server, player, handler, buf, responseSender) -> {
+			server.execute(() -> net.onixary.shapeShifterCurseFabric.ssc_addon.ability.FluorescentTidalManager.onKeyPress(player));
 		});
 
 		// ===== SSCA 进化加点系统 =====
