@@ -77,6 +77,11 @@ public class FormUtils {
 		return isForm(entity, FormIdentifiers.AXOLOTL_FLUORESCENT);
 	}
 
+	/** 需要保湿的形态判断（SP 美西螈 或 荧光幼灵），用于加湿器生效判定。 */
+	public static boolean isMoistureDependent(LivingEntity entity) {
+		return isAxolotlSP(entity) || isAxolotlFluorescent(entity);
+	}
+
 	public static boolean isAnubisWolfSP(LivingEntity entity) {
 		return isForm(entity, FormIdentifiers.ANUBIS_WOLF_SP);
 	}

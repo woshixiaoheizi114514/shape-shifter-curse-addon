@@ -59,7 +59,7 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
     private static final int ATTRACT_ACTIVE_TICKS = 3;      // 0.15 秒吸附作用
     private static final int ATTRACT_INTERVAL_TICKS = 17;   // 0.85 秒间隔
     private static final int ATTRACT_TOTAL_TIMES = 6;       // 共 6 次
-    private static final double PULL_STRENGTH = 0.36;       // 单次吸附位移力度（×2，明显位移但不爆冲）
+    private static final double PULL_STRENGTH = 0.22;       // 单次吸附位移力度（×factor，温和聚怪不爆冲）
     private static final float PULL_PHYSICAL_DAMAGE = 4.0f; // 每次吸附范围内造成 4 点物理伤害
 
     // ===== 消失延迟 =====

@@ -42,7 +42,7 @@ public class PortableMoisturizerItem extends Item {
 		boolean newState = !isActive;
 		setActive(stack, !isActive);
 
-		boolean isValidForm = FormUtils.isAxolotlSP(player);
+		boolean isValidForm = FormUtils.isMoistureDependent(player);
 
 		if (newState && !isValidForm) {
 			player.sendMessage(Text.translatable("message.ssc_addon.moisturizer.off"), true);
@@ -62,7 +62,7 @@ public class PortableMoisturizerItem extends Item {
 	}
 
 	private void humidifyLogic(ItemStack stack, World world, PlayerEntity player) {
-		if (!FormUtils.isAxolotlSP(player)) {
+		if (!FormUtils.isMoistureDependent(player)) {
 			if (isActive(stack)) {
 				setActive(stack, false);
 			}
