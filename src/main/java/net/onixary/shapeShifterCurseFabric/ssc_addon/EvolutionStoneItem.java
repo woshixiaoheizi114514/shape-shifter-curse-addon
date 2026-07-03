@@ -86,8 +86,8 @@ public class EvolutionStoneItem extends Item {
 					targetFormId = new Identifier("my_addon", "bat_parasitic_fruit");
 					canEvolve = true;
 				}
-				// 允许 SP美西螈使用进化石进化为荧光幼灵
-				else if (playerFormID.equals(new Identifier("my_addon", "axolotl_sp"))) {
+				// 允许原版三阶段美西螈使用进化石进化为荧光幼灵
+				else if (playerFormID.equals(new Identifier("shape-shifter-curse", "axolotl_3"))) {
 					targetFormId = new Identifier("my_addon", "axolotl_fluorescent");
 					canEvolve = true;
 				}
