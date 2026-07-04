@@ -56,6 +56,12 @@ public class FormUtils {
 		return isForm(entity, FormIdentifiers.FAMILIAR_FOX_RED);
 	}
 
+	/** 使魔系形态（使魔SP / 进化使魔 / 契灵 / 红堕落使魔）。 */
+	public static boolean isFamiliarFoxFamily(LivingEntity entity) {
+		return isAnyForm(entity, FormIdentifiers.FAMILIAR_FOX_SP, FormIdentifiers.UPGRADE_FAMILIAR_FOX,
+				FormIdentifiers.FAMILIAR_FOX_RED, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA);
+	}
+
 	public static boolean isSnowFoxSP(LivingEntity entity) {
 		return isForm(entity, FormIdentifiers.SNOW_FOX_SP);
 	}

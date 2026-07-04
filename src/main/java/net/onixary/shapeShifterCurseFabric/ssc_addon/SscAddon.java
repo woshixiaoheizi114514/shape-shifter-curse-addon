@@ -266,6 +266,14 @@ public class SscAddon implements ModInitializer {
 			new Item.Settings().maxCount(1), net.onixary.shapeShifterCurseFabric.ssc_addon.item.InfiniteEnergyPotionItem.Type.SPLASH);
 	public static final Item INFINITE_ENERGY_POTION_LINGERING = new net.onixary.shapeShifterCurseFabric.ssc_addon.item.InfiniteEnergyPotionItem(
 			new Item.Settings().maxCount(1), net.onixary.shapeShifterCurseFabric.ssc_addon.item.InfiniteEnergyPotionItem.Type.LINGERING);
+	// 凋零药水（饮用/喷溅/滞留三型，任何人可用，凋零II 20秒；瓶身附魔光效）
+	// 堆叠：默认不可叠(maxCount 1)；使魔系叠8 / SP阿努比斯叠3（由 WitherPotionStackMixin 按形态抬高）
+	public static final Item WITHER_POTION = new net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem(
+			new Item.Settings().maxCount(1), net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem.Type.DRINK);
+	public static final Item WITHER_POTION_SPLASH = new net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem(
+			new Item.Settings().maxCount(1), net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem.Type.SPLASH);
+	public static final Item WITHER_POTION_LINGERING = new net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem(
+			new Item.Settings().maxCount(1), net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem.Type.LINGERING);
 	public static final RecipeSerializer<InfiniteEnergyPotionRecipe> INFINITE_ENERGY_POTION_SERIALIZER = new SpecialRecipeSerializer<>(InfiniteEnergyPotionRecipe::new);
 	public static final ItemGroup SSC_ADDON_GROUP = Registry.register(Registries.ITEM_GROUP,
 			new Identifier("ssc_addon", "group"),
@@ -303,6 +311,10 @@ public class SscAddon implements ModInitializer {
 						entries.add(INFINITE_ENERGY_POTION);
 						entries.add(INFINITE_ENERGY_POTION_SPLASH);
 						entries.add(INFINITE_ENERGY_POTION_LINGERING);
+						// 凋零药水（饮用/喷溅/滞留）
+						entries.add(WITHER_POTION);
+						entries.add(WITHER_POTION_SPLASH);
+						entries.add(WITHER_POTION_LINGERING);
 					})
 					.build());
 	// SP Allay sound events
@@ -423,6 +435,9 @@ public class SscAddon implements ModInitializer {
 		Registry.register(Registries.ITEM, new Identifier("ssc_addon", "infinite_energy_potion"), INFINITE_ENERGY_POTION);
 		Registry.register(Registries.ITEM, new Identifier("ssc_addon", "infinite_energy_potion_splash"), INFINITE_ENERGY_POTION_SPLASH);
 		Registry.register(Registries.ITEM, new Identifier("ssc_addon", "infinite_energy_potion_lingering"), INFINITE_ENERGY_POTION_LINGERING);
+		Registry.register(Registries.ITEM, new Identifier("ssc_addon", "wither_potion"), WITHER_POTION);
+		Registry.register(Registries.ITEM, new Identifier("ssc_addon", "wither_potion_splash"), WITHER_POTION_SPLASH);
+		Registry.register(Registries.ITEM, new Identifier("ssc_addon", "wither_potion_lingering"), WITHER_POTION_LINGERING);
 		// 酿造（饮用+火药→喷溅；喷溅+龙息→滞留）完全由 BrewingRegistryInfiniteMixin 接管：
 		// 直接拦截 hasRecipe/craft 驱动产出，槽位放行由 BrewingStandInfinitePotionMixin 处理。
 		// 旧的 ITEM_RECIPES 注册需构造 PotionBrewing$Mix，在 Forge/Sinytra Connector 下构造签名不同会崩溃，已移除。
@@ -630,6 +645,8 @@ public class SscAddon implements ModInitializer {
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexChargeManager.tick(player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.PlayDeadAbsorptionManager.tick(player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.FluorescentTidalManager.tick(player);
+			// 冥裁者凋零阶梯 / 凋零抗性追踪（凋零持续时长分层 + tick 跳过计数）
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WitherFrenzyManager.tick(player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionManager.tickPlayer(player);
 		}
 	});
@@ -930,6 +947,19 @@ public class SscAddon implements ModInitializer {
 				return net.minecraft.util.TypedActionResult.success(sp.getStackInHand(hand));
 			}
 			return net.minecraft.util.TypedActionResult.pass(player.getStackInHand(hand));
+		});
+		// SP阿努比斯吃凋零玫瑰：进食效果由 custom_edible(form_anubis_wolf_sp_eat_wither_rose) + eatFood mixin 处理。
+		net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+			// SP阿努比斯手持凋零玫瑰看向方块右键时，原版会放置花；返回 FAIL 取消放置，
+			// 让交互落到 use() → 由 custom_edible(form_anubis_wolf_sp_eat_wither_rose) 驱动进食(32t 读条，同吃牛排)。
+			// 看向空气时不经过 UseBlockCallback，use() 直接进食，无需在此处理。
+			if (hand == net.minecraft.util.Hand.MAIN_HAND
+					&& player.getMainHandStack().isOf(net.minecraft.item.Items.WITHER_ROSE)
+					&& net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormUtils.isForm(player,
+							net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers.ANUBIS_WOLF_SP)) {
+				return net.minecraft.util.ActionResult.FAIL;
+			}
+			return net.minecraft.util.ActionResult.PASS;
 		});
 		net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
 			if (player.hasStatusEffect(MIST_FORM)

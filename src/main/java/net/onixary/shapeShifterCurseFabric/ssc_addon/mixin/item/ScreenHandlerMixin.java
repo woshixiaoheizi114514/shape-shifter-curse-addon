@@ -101,13 +101,26 @@ public abstract class ScreenHandlerMixin {
 	@Unique
 	private boolean ssc_addon$tryMergeStackablePotions(int button, PlayerEntity player) {
 		ItemStack cursor = this.getCursorStack();
-		if (cursor.isEmpty() || !(cursor.getItem() instanceof PotionItem)) {
+		if (cursor.isEmpty()) {
 			return false;
 		}
-		int n = PowerHolderComponent.getPowers(player, ModifyPotionStackPower.class)
-				.stream().mapToInt(ModifyPotionStackPower::getCount).max().orElse(0);
-		int maxStack = Math.max(n, cursor.getMaxCount());
-		if (n <= 0 || cursor.getCount() >= maxStack) {
+		int maxStack;
+		if (cursor.getItem() instanceof PotionItem) {
+			int n = PowerHolderComponent.getPowers(player, ModifyPotionStackPower.class)
+					.stream().mapToInt(ModifyPotionStackPower::getCount).max().orElse(0);
+			if (n <= 0) {
+				return false;
+			}
+			maxStack = Math.max(n, cursor.getMaxCount());
+		} else if (cursor.getItem() instanceof net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem) {
+			maxStack = net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem.getStackLimitFor(player);
+			if (maxStack <= 1) {
+				return false;
+			}
+		} else {
+			return false;
+		}
+		if (cursor.getCount() >= maxStack) {
 			return false;
 		}
 		int start = button == 0 ? 0 : this.slots.size() - 1;
@@ -144,6 +157,9 @@ public abstract class ScreenHandlerMixin {
 			at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;getMaxCount()I")
 	)
 	private int ssc_addon$potionStackLimit(ItemStack stack, int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
+		if (stack.getItem() instanceof net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem) {
+			return Math.max(net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem.getStackLimitFor(player), stack.getMaxCount());
+		}
 		if (stack.getItem() instanceof PotionItem) {
 			int n = PowerHolderComponent.getPowers(player, ModifyPotionStackPower.class)
 					.stream()

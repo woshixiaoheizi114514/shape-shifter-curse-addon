@@ -31,9 +31,10 @@ public abstract class BrewingStandInfinitePotionMixin {
 
     @Inject(method = "isValid", at = @At("HEAD"), cancellable = true)
     private void ssc_addon$allowInfinitePotion(int slot, ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
-        // 底部 3 个药水槽（0/1/2）：额外接受无限压缩能量药水，并保持原版「该槽必须为空」的限制
+        // 底部 3 个药水槽（0/1/2）：额外接受无限压缩能量药水 / 凋零药水，并保持原版「该槽必须为空」的限制
         if (slot >= 0 && slot < 3
-                && stack.getItem() instanceof InfiniteEnergyPotionItem
+                && (stack.getItem() instanceof InfiniteEnergyPotionItem
+                    || stack.getItem() instanceof net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem)
                 && this.getStack(slot).isEmpty()) {
             cir.setReturnValue(true);
         }
@@ -49,7 +50,8 @@ abstract class BrewingPotionSlotMixin {
 
     @Inject(method = "matches", at = @At("HEAD"), cancellable = true)
     private static void ssc_addon$allowInfinitePotion(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
-        if (stack.getItem() instanceof InfiniteEnergyPotionItem) {
+        if (stack.getItem() instanceof InfiniteEnergyPotionItem
+                || stack.getItem() instanceof net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem) {
             cir.setReturnValue(true);
         }
     }
@@ -96,6 +98,13 @@ abstract class BrewingRegistryInfiniteMixin {
         }
         if (input.isOf(SscAddon.INFINITE_ENERGY_POTION_SPLASH) && ingredient.isOf(Items.DRAGON_BREATH)) {
             return SscAddon.INFINITE_ENERGY_POTION_LINGERING;
+        }
+        // 凋零药水：饮用 + 火药 → 喷溅；喷溅 + 龙息 → 滞留
+        if (input.isOf(SscAddon.WITHER_POTION) && ingredient.isOf(Items.GUNPOWDER)) {
+            return SscAddon.WITHER_POTION_SPLASH;
+        }
+        if (input.isOf(SscAddon.WITHER_POTION_SPLASH) && ingredient.isOf(Items.DRAGON_BREATH)) {
+            return SscAddon.WITHER_POTION_LINGERING;
         }
         return null;
     }

@@ -771,5 +771,12 @@
     "power.my_addon.form_axolotl_fluorescent_moisture_drain.description": "在地面时每秒消耗1%潮湿度（氧气）。",
     "power.my_addon.form_axolotl_fluorescent_dehydration.name": "脱水",
     "power.my_addon.form_axolotl_fluorescent_dehydration.description": "潮湿度耗尽时每秒受到2点脱水伤害。",
-    "effect.ssc_addon.tidal_slow": "潮汐减速"
+    "effect.ssc_addon.tidal_slow": "潮汐减速",
+    "power.my_addon.form_anubis_wolf_sp_wither_frenzy.name": "凋零共生",
+    "power.my_addon.form_anubis_wolf_sp_wither_frenzy.description": "亡灵体质让你与凋零共存：凋零对你的伤害减少20%且伤害间隔延长40%；凋零期间你与冥狼的伤害随持续时间阶梯递增（每2秒+10%，最高+30%）。你或冥狼攻击时会消耗自身凋零时间（每次5秒）传染给目标（不足则消耗全部，等级继承），目标调零累加上限15秒；凋零状态下击杀额外获得10点灵魂能量。",
+    "item.ssc_addon.wither_potion": "凋零药水",
+    "item.ssc_addon.wither_potion_splash": "喷溅型凋零药水",
+    "item.ssc_addon.wither_potion_lingering": "滞留型凋零药水",
+    "power.my_addon.form_anubis_wolf_sp_craft_wither_potion.name": "凋零酿造",
+    "power.my_addon.form_anubis_wolf_sp_craft_wither_potion.description": "手持药水与凋零玫瑰（一个在光标一个在背包格），点击合成 1 瓶凋零药水（可叠 3）。凋零药水仅你能饮用，喝下（32t 读条）获得固定凋零 II、持续 20 秒。"
 }

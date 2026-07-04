@@ -118,6 +118,27 @@ public abstract class SscAddonLivingEntityMixin {
 		if (!cir.getReturnValue()) return;
 		LivingEntity self = (LivingEntity) (Object) this;
 		AllaySPRangedHitPassive.onDamageApplied(self, source);
+		// 冥裁者「凋零传染」：玩家本人或其冥狼攻击命中时，消耗自身凋零时间转移给目标。
+		// 玩家本人攻击
+		if (!self.getWorld().isClient()
+				&& source.getAttacker() instanceof ServerPlayerEntity attacker
+				&& FormUtils.isForm(attacker, FormIdentifiers.ANUBIS_WOLF_SP)) {
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WitherFrenzyManager.tryWitherInfect(attacker, self);
+			return;
+		}
+		// 冥狼攻击 → 找主人，以主人的凋零状态传染
+		if (!self.getWorld().isClient()
+				&& source.getAttacker() instanceof net.onixary.shapeShifterCurseFabric.minion.mobs.AnubisWolfMinionEntity wolf
+				&& self.getWorld() instanceof net.minecraft.server.world.ServerWorld serverWorld) {
+			java.util.UUID ownerUuid = wolf.getMinionOwnerUUID();
+			if (ownerUuid != null) {
+				net.minecraft.entity.player.PlayerEntity owner = serverWorld.getPlayerByUuid(ownerUuid);
+				if (owner instanceof ServerPlayerEntity ownerPlayer
+						&& FormUtils.isForm(ownerPlayer, FormIdentifiers.ANUBIS_WOLF_SP)) {
+					net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WitherFrenzyManager.tryWitherInfect(ownerPlayer, self);
+				}
+			}
+		}
 	}
 
 	@ModifyArgs(method = "damage", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;applyDamage(Lnet/minecraft/entity/damage/DamageSource;F)V"))
@@ -148,6 +169,62 @@ public abstract class SscAddonLivingEntityMixin {
 		if (!InfectionSporeManager.isInfected(living.getUuid())) return;
 		float amount = args.get(1);
 		args.set(1, InfectionSporeManager.reduceDamageIfInfected(living, amount));
+	}
+
+	/**
+	 * 冥裁者「凋零阶梯」：自身有凋零时，按凋零持续时长分阶增伤（+10%/+20%/+30%）。
+	 * 覆盖两类攻击者：
+	 *   1. SP阿努比斯玩家本人造成的伤害
+	 *   2. 该玩家召唤的冥狼（AnubisWolfMinionEntity）造成的伤害 —— 经 getMinionOwnerUUID() 找主人
+	 * 增伤倍率由 WitherFrenzyManager.getDamageMultiplier 统一给出。仅服务端判定。
+	 */
+	@ModifyArgs(method = "damage", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;applyDamage(Lnet/minecraft/entity/damage/DamageSource;F)V"))
+	private void ssc_addon$anubisWolfWitherFrenzy(Args args) {
+		LivingEntity self = (LivingEntity) (Object) this;
+		if (self.getWorld().isClient()) return;
+		DamageSource source = args.get(0);
+		Entity attacker = source.getAttacker();
+		float amount = args.get(1);
+
+		// 1) 玩家本人攻击
+		if (attacker instanceof ServerPlayerEntity sp
+				&& FormUtils.isForm(sp, FormIdentifiers.ANUBIS_WOLF_SP)) {
+			args.set(1, amount * net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WitherFrenzyManager.getDamageMultiplier(sp));
+			return;
+		}
+		// 2) 冥狼攻击 → 找主人
+		if (attacker instanceof net.onixary.shapeShifterCurseFabric.minion.mobs.AnubisWolfMinionEntity wolf) {
+			java.util.UUID ownerUuid = wolf.getMinionOwnerUUID();
+			if (ownerUuid == null) return;
+			if (!(self.getWorld() instanceof net.minecraft.server.world.ServerWorld serverWorld)) return;
+			net.minecraft.entity.player.PlayerEntity owner = serverWorld.getPlayerByUuid(ownerUuid);
+			if (owner instanceof ServerPlayerEntity ownerPlayer
+					&& FormUtils.isForm(ownerPlayer, FormIdentifiers.ANUBIS_WOLF_SP)) {
+				args.set(1, amount * net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WitherFrenzyManager.getDamageMultiplier(ownerPlayer));
+			}
+		}
+	}
+
+	/**
+	 * 冥裁者「凋零抗性」：凋零对 SP阿努比斯造成的伤害减免 20%，且伤害间隔延长 40%
+	 * （每 7 次 tick 跳过 2 次，等效间隔 ×1.4）。净伤害 ≈ 原值 57%。
+	 * 凋零伤害来源 = DamageTypes.WITHER。
+	 */
+	@ModifyArgs(method = "damage", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;applyDamage(Lnet/minecraft/entity/damage/DamageSource;F)V"))
+	private void ssc_addon$anubisWolfWitherResistance(Args args) {
+		LivingEntity self = (LivingEntity) (Object) this;
+		if (self.getWorld().isClient()) return;
+		if (!(self instanceof ServerPlayerEntity sp)) return;
+		if (!FormUtils.isForm(sp, FormIdentifiers.ANUBIS_WOLF_SP)) return;
+		DamageSource source = args.get(0);
+		if (!source.isOf(DamageTypes.WITHER)) return;
+		float scale = net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WitherFrenzyManager.getWitherDamageScale(sp);
+		if (scale <= 0f) {
+			// 本次凋零 tick 跳过（间隔延长）
+			args.set(1, 0.0f);
+		} else {
+			args.set(1, (float) args.get(1) * scale);
+		}
 	}
 
 	@ModifyVariable(method = "addStatusEffect(Lnet/minecraft/entity/effect/StatusEffectInstance;Lnet/minecraft/entity/Entity;)Z", at = @At("HEAD"), argsOnly = true)
@@ -258,6 +335,9 @@ public abstract class SscAddonLivingEntityMixin {
 	}
 
 	// ============== 吸血蝙蝠 - 血渴值系统 ==============
+
+	/**
+	 * 蝙蝠玩家受到/造成伤害时的战斗打点（HEAD）。
 
 	/**
 	 * 蝙蝠玩家受到/造成伤害时的战斗打点（HEAD）。

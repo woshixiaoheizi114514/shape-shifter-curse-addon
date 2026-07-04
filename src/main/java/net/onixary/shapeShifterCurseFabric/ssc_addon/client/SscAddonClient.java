@@ -300,6 +300,12 @@ public class SscAddonClient implements ClientModInitializer {
 				SscAddon.WITCH_FAMILIAR_SPAWN_EGG
 		);
 
+		// 凋零药水（3型）：tintIndex 0 = 液体层染成凋零色（避免空瓶外观）；其它层（玻璃瓶）不染色
+		ColorProviderRegistry.ITEM.register(
+				(stack, tintIndex) -> tintIndex == 0 ? 0x4A403A : 0xFFFFFF,
+				SscAddon.WITHER_POTION, SscAddon.WITHER_POTION_SPLASH, SscAddon.WITHER_POTION_LINGERING
+		);
+
 		// Register predicate for 3D model when held (0.0 = inventory/ground, 1.0 = held)
 		ModelPredicateProviderRegistry.register(SscAddon.WATER_SPEAR, new Identifier("ssc_addon", "held"), (stack, world, entity, seed) ->
 				entity != null && (entity.getMainHandStack() == stack || entity.getOffHandStack() == stack) ? 1.0F : 0.0F

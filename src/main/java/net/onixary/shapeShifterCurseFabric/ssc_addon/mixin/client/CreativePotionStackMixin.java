@@ -28,6 +28,10 @@ public class CreativePotionStackMixin {
 			at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;getMaxCount()I")
 	)
 	private int ssc_addon$potionCreativeStackLimit(ItemStack stack) {
+		if (stack.getItem() instanceof net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem) {
+			return Math.max(net.onixary.shapeShifterCurseFabric.ssc_addon.item.WitherPotionItem
+					.getStackLimitFor(MinecraftClient.getInstance().player), stack.getMaxCount());
+		}
 		if (stack.getItem() instanceof PotionItem) {
 			PlayerEntity player = MinecraftClient.getInstance().player;
 			if (player != null) {

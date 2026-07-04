@@ -17,6 +17,8 @@
                    "effect.FrostFreezeDamageMixin",
                    "entity.GoldenSandstormHungerMixin",
                    "IronsSpellbooksAnimationMixin",
+                   "item.AnubisEatWitherRoseItemMixin",
+                   "item.WitherPotionStackMixin",
                    "item.AmuletBraceletTrinketMixin",
                    "item.CharmOfNightCrystalTrinketMixin",
                    "item.ItemEntityMixin",

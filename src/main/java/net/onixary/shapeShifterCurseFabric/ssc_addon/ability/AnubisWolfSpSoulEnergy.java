@@ -42,6 +42,10 @@ public class AnubisWolfSpSoulEnergy {
 	 * 普通击杀获得的能量
 	 */
 	private static final int REGULAR_KILL_ENERGY = 5;
+	/**
+	 * 自身处于凋零时击杀额外获得的能量（凋零收割循环）
+	 */
+	private static final int WITHER_KILL_BONUS_ENERGY = 10;
 
 	private AnubisWolfSpSoulEnergy() {
 	}
@@ -133,6 +137,10 @@ public class AnubisWolfSpSoulEnergy {
 			} else {
 				addEnergy(killer, REGULAR_KILL_ENERGY);
 			}
+// 凋零击杀回能：自身处于凋零时击杀额外 +10 灵魂能量
+			if (killer.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.WITHER)) {
+				addEnergy(killer, WITHER_KILL_BONUS_ENERGY);
+			}
 			return;
 		}
 
@@ -150,6 +158,10 @@ public class AnubisWolfSpSoulEnergy {
 					return;
 				}
 				addEnergy(ownerPlayer, MINION_KILL_ENERGY);
+// 凋零击杀回能：冥狼击杀时，若主人处于凋零，额外 +10 灵魂能量
+				if (ownerPlayer.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.WITHER)) {
+					addEnergy(ownerPlayer, WITHER_KILL_BONUS_ENERGY);
+				}
 			}
 		}
 	}

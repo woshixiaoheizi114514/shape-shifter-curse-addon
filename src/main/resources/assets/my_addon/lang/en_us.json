@@ -737,5 +737,12 @@
     "power.my_addon.form_axolotl_fluorescent_moisture_drain.description": "Lose 1% moisture (air) per second on the ground.",
     "power.my_addon.form_axolotl_fluorescent_dehydration.name": "Dehydration",
     "power.my_addon.form_axolotl_fluorescent_dehydration.description": "Take 2 dehydration damage per second when moisture is depleted.",
-    "effect.ssc_addon.tidal_slow": "Tidal Slow"
+    "effect.ssc_addon.tidal_slow": "Tidal Slow",
+    "power.my_addon.form_anubis_wolf_sp_wither_frenzy.name": "Wither Symbiosis",
+    "power.my_addon.form_anubis_wolf_sp_wither_frenzy.description": "Your undead constitution lets you coexist with Wither: Wither damage you take is reduced by 20% and its tick interval extended by 40%. While Withered, your and your Netherwolves' damage rises in tiers over time (+10% per 2s, up to +30%). When you or a Netherwolf attack, you consume your own Wither duration (5s per hit) to infect the target (or all remaining if less; level inherited; target stacks up to 15s). Kills while Withered grant +10 Soul Energy.",
+    "item.ssc_addon.wither_potion": "Wither Potion",
+    "item.ssc_addon.wither_potion_splash": "Splash Wither Potion",
+    "item.ssc_addon.wither_potion_lingering": "Lingering Wither Potion",
+    "power.my_addon.form_anubis_wolf_sp_craft_wither_potion.name": "Wither Brewing",
+    "power.my_addon.form_anubis_wolf_sp_craft_wither_potion.description": "With a Potion and a Wither Rose (one on the cursor, one in an inventory slot), click to brew 1 Wither Potion (stacks up to 3). Only you can drink Wither Potions; drinking (32t) grants a fixed Wither II for 20 seconds."
 }
