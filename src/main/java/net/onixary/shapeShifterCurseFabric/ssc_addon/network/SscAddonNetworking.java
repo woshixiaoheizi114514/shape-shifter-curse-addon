@@ -52,6 +52,8 @@ public class SscAddonNetworking {
 	public static final Identifier PACKET_FLUO_LASER = new Identifier("my_addon", "fluo_laser_key");
 	/** C2S：荧光幼灵次要技能（潮汐波动）按键。无 payload。 */
 	public static final Identifier PACKET_FLUO_TIDAL = new Identifier("my_addon", "fluo_tidal_key");
+	/** S2C：荧光幼灵「潮汐束缚」把被拴目标的 entityId 同步给客机，用于渲染守卫者激光。payload: varint orbId + varint count + count*varint entityId */
+	public static final Identifier PACKET_TIDAL_TETHER = new Identifier("my_addon", "tidal_tether");
 
 	// ===== SSCA 进化加点系统网络包（框架） =====
 	/** C2S：玩家选择进化路线。payload: String routeId */

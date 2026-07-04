@@ -36,11 +36,11 @@
     },
     "regen": {
         "type": "apoli:action_over_time",
-        "interval": 4,
+        "interval": 8,
         "entity_action": {
             "type": "apoli:change_resource",
             "resource": "my_addon:form_allay_sp_mana_resource",
-            "change": 1,
+            "change": 3,
             "operation": "add"
         },
         "condition": {

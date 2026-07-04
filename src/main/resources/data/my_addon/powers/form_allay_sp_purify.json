@@ -21,7 +21,7 @@
     "cooldown_timer": {
         "type": "apoli:resource",
         "min": 0,
-        "max": 600,
+        "max": 400,
         "start_value": 0,
         "hud_render": {
             "should_render": false
@@ -48,7 +48,7 @@
         "key": {
             "key": "key.ssc_addon.sp_primary"
         },
-        "cooldown": 10,
+        "cooldown": 20,
         "entity_action": {
             "type": "apoli:if_else",
             "condition": {
@@ -169,7 +169,7 @@
                                 "type": "apoli:change_resource",
                                 "resource": "my_addon:form_allay_sp_purify_cooldown_timer",
                                 "operation": "set",
-                                "change": 600
+                                "change": 400
                             },
                             {
                                 "type": "apoli:change_resource",
@@ -422,7 +422,7 @@
                     "type": "apoli:change_resource",
                     "resource": "my_addon:form_allay_sp_purify_cooldown_timer",
                     "operation": "set",
-                    "change": 100
+                    "change": 80
                 },
                 {
                     "type": "apoli:clear_effect",

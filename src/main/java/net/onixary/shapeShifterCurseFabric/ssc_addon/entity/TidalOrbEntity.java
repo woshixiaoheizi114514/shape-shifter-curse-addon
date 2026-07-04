@@ -3,21 +3,17 @@ package net.onixary.shapeShifterCurseFabric.ssc_addon.entity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageType;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -26,7 +22,9 @@ import net.onixary.shapeShifterCurseFabric.ssc_addon.SscAddon;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.WhitelistUtils;
 import org.joml.Vector3f;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -36,8 +34,9 @@ import java.util.UUID;
  * <ul>
  *   <li>FLYING：4 格/s 向前飞行，每 tick 缓慢偏向主人准星方向（陶氏导弹式，最大 ~3°/tick）；最多飞 8 秒。</li>
  *   <li>DECELERATING：飞行中再次按键 / 飞满 8 秒触发，0.75 秒内速度线性衰减至 0（保持当前方向，不再转向）。</li>
- *   <li>ATTRACTING：静止后以半径 5 吸附周围非白名单生物，每次吸附作用 0.15s + 间隔 0.85s，共 6 次；被吸者获 15% 减速 1.5s（刷新）+ 脚底青蓝粒子。</li>
- *   <li>DELAY：6 次吸附完毕，延迟 0.35 秒后泡泡破裂消失。</li>
+ *   <li>ATTRACTING（潮汐束缚 / 拴人）：落点瞬间捕获半径 6 格内所有非白名单目标；持续 8.5 秒把它们「拴」在落点，
+ *       6 格内自由活动，超出 6 格按超出距离线性拉回锚点，绝不允许超过 8 格。纯控制、无伤害。</li>
+ *   <li>DELAY：拴人时长结束，延迟 0.35 秒后泡泡破裂消失。</li>
  * </ul>
  * 不消耗潮湿度；CD 在球完全消失后由技能管理器起算；可被净化（PURIFIED）直接消除。
  *
@@ -54,18 +53,22 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
     // ===== 减速参数 =====
     private static final int DECEL_TICKS = 15;              // 0.75 秒减速到 0
 
-    // ===== 吸附参数 =====
-    private static final double ATTRACT_RADIUS = 5.0;
-    private static final int ATTRACT_ACTIVE_TICKS = 3;      // 0.15 秒吸附作用
-    private static final int ATTRACT_INTERVAL_TICKS = 17;   // 0.85 秒间隔
-    private static final int ATTRACT_TOTAL_TIMES = 6;       // 共 6 次
-    private static final double PULL_STRENGTH = 0.22;       // 单次吸附位移力度（×factor，温和聚怪不爆冲）
-    private static final float PULL_PHYSICAL_DAMAGE = 4.0f; // 每次吸附范围内造成 4 点物理伤害
+    // ===== 拴人参数（潮汐束缚）=====
+    private static final double TETHER_CATCH_RADIUS = 6.0;    // 落点瞬间：捕获半径 6 格内所有目标
+    private static final double TETHER_SOFT_RADIUS = 6.0;     // 软边界：6 格内自由活动
+    private static final double TETHER_HARD_RADIUS = 8.0;     // 硬边界：绝不允许超过 8 格
+    private static final int TETHER_DURATION_TICKS = 170;     // 拴住时长 8.5 秒
+    private static final double TETHER_PULL_PER_BLOCK = 0.30; // 超出 6 格后：每超 1 格给 0.30 速度线性拉回
+    private static final double TETHER_VERTICAL_DAMP = 0.4;   // 垂直拉力衰减，避免上下猛拽
 
     // ===== 消失延迟 =====
     private static final int POP_DELAY_TICKS = 7;           // 0.35 秒后破裂
 
     private enum Phase { FLYING, DECELERATING, ATTRACTING, DELAY }
+
+    /** 客户端同步：是否处于拴人（激活）状态，用于把潮涌核心切换为激活态渲染。 */
+    private static final net.minecraft.entity.data.TrackedData<Boolean> TETHER_ACTIVE =
+            net.minecraft.entity.data.DataTracker.registerData(TidalOrbEntity.class, net.minecraft.entity.data.TrackedDataHandlerRegistry.BOOLEAN);
 
     private Phase phase = Phase.FLYING;
     private int ticksAlive = 0;
@@ -73,8 +76,8 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
     private UUID ownerUuid;
     private Vec3d flyDir = new Vec3d(0, 0, 1);   // FLYING / DECEL 用
     private double currentSpeed = FLY_SPEED;     // DECEL 时衰减
-    private int attractCount = 0;                // 已吸附次数
-    private int attractCycleTick = 0;            // 吸附周期内 tick（0..INTERVAL）
+    private Vec3d tetherCenter = null;           // 落点锚点（拴人中心）
+    private final Set<UUID> tetheredTargets = new HashSet<>(); // 落点瞬间捕获、被拴住的目标 UUID
 
     // ===== 粒子配色（青/蓝/淡蓝/白：水 + 荧光） =====
     private static final DustParticleEffect CYAN_DUST =
@@ -102,6 +105,7 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
 
     @Override
     protected void initDataTracker() {
+        this.dataTracker.startTracking(TETHER_ACTIVE, false);
     }
 
     /** 飞行阶段：触发减速（玩家再次按键 / 飞满 8 秒自动）。 */
@@ -203,77 +207,113 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
         return false;
     }
 
-    /** 进入吸附阶段（减速停下 / 撞墙 / 飞满时长）。 */
+    /** 落点：进入「拴人」阶段（减速停下 / 撞墙 / 飞满时长）。记录锚点并捕获 6 格内目标。 */
     private void enterAttractPhase(ServerWorld sw) {
         currentSpeed = 0.0;
         phase = Phase.ATTRACTING;
+        this.dataTracker.set(TETHER_ACTIVE, true); // 潮涌核心切激活态
         phaseTicks = 0;
-        attractCycleTick = 0;
-        // 落点「潮汐降临」：一次清晰潮涌音（球位置 + 主人位置，不重叠）
-        sw.playSound(null, getX(), getY(), getZ(),
-                SoundEvents.BLOCK_CONDUIT_ACTIVATE, SoundCategory.PLAYERS, 1.0f, 1.1f);
+        tetherCenter = getPos();
+        // 落点瞬间捕获半径 6 格内的所有合法目标（之后再进入范围的不算）
+        tetheredTargets.clear();
         ServerPlayerEntity owner = getOwner(sw);
+        double cx = tetherCenter.x, cy = tetherCenter.y, cz = tetherCenter.z;
+        Box box = new Box(cx - TETHER_CATCH_RADIUS, cy - TETHER_CATCH_RADIUS, cz - TETHER_CATCH_RADIUS,
+                cx + TETHER_CATCH_RADIUS, cy + TETHER_CATCH_RADIUS, cz + TETHER_CATCH_RADIUS);
+        List<LivingEntity> found = sw.getEntitiesByClass(LivingEntity.class, box,
+                e -> e.isAlive() && !e.isSpectator()
+                        && e.squaredDistanceTo(cx, cy, cz) <= TETHER_CATCH_RADIUS * TETHER_CATCH_RADIUS);
+        for (LivingEntity t : found) {
+            if (WhitelistUtils.isProtected(ownerUuid, sw, t)) continue; // 默认白名单豁免（owner 离线也保守保护玩家/宠物）
+            if (t.getUuid().equals(ownerUuid)) continue;                          // 主人自己不被拴
+            tetheredTargets.add(t.getUuid());
+        }
+        // 落点「潮汐降临」：一次清晰潮涌音（球位置 + 主人位置，不重叠）
+        sw.playSound(null, cx, cy, cz,
+                SoundEvents.BLOCK_CONDUIT_ACTIVATE, SoundCategory.PLAYERS, 1.0f, 1.1f);
         if (owner != null) {
             sw.playSound(null, owner.getX(), owner.getY(), owner.getZ(),
                     SoundEvents.BLOCK_CONDUIT_ACTIVATE, SoundCategory.PLAYERS, 0.5f, 1.1f);
         }
-        // 落点水柱爆开
-        sw.spawnParticles(ParticleTypes.SPLASH, getX(), getY(), getZ(), 50, 0.8, 0.5, 0.8, 0.4);
-        sw.spawnParticles(ParticleTypes.BUBBLE_COLUMN_UP, getX(), getY() - 0.3, getZ(), 30, 0.6, 0.2, 0.6, 0.3);
+        // 落点水柱爆开 + 6 格束缚环
+        sw.spawnParticles(ParticleTypes.SPLASH, cx, cy, cz, 50, 0.8, 0.5, 0.8, 0.4);
+        sw.spawnParticles(ParticleTypes.BUBBLE_COLUMN_UP, cx, cy - 0.3, cz, 30, 0.6, 0.2, 0.6, 0.3);
+        spawnTetherRing(sw, 40);
     }
 
-    // ==================== ATTRACTING ====================
+    // ==================== ATTRACTING（潮汐束缚 / 拴人）====================
     private void tickAttracting(ServerWorld sw) {
-        // 悬停粒子（潮涌核心持续旋转）
+        // 锚点悬停粒子 + 6 格束缚环
         spawnHoverParticles(sw);
-        // 吸附周期：前 ATTRACT_ACTIVE_TICKS 施加吸附力，之后等待 INTERVAL 再次触发
-        if (attractCycleTick < ATTRACT_ACTIVE_TICKS) {
-            applyPull(sw);
+        applyTether(sw);
+        // 每 10 tick 把被拴目标同步给客机，用于渲染守卫者激光
+        if (phaseTicks % 10 == 1) {
+            syncTetherToClients(sw);
         }
-        attractCycleTick++;
-        if (attractCycleTick >= ATTRACT_INTERVAL_TICKS) {
-            attractCycleTick = 0;
-            attractCount++;
-            if (attractCount >= ATTRACT_TOTAL_TIMES) {
-                phase = Phase.DELAY;
-                phaseTicks = 0;
-            }
+        if (phaseTicks >= TETHER_DURATION_TICKS) {
+            phase = Phase.DELAY;
+            phaseTicks = 0;
         }
     }
 
-    /** 单次吸附：把半径 5 内非白名单生物向球拉，施加 15% 减速 + 4 物理伤害 + 脚底粒子。 */
-    private void applyPull(ServerWorld sw) {
-        Box box = new Box(getX() - ATTRACT_RADIUS, getY() - ATTRACT_RADIUS, getZ() - ATTRACT_RADIUS,
-                getX() + ATTRACT_RADIUS, getY() + ATTRACT_RADIUS, getZ() + ATTRACT_RADIUS);
-        List<LivingEntity> targets = sw.getEntitiesByClass(LivingEntity.class, box,
-                e -> e.isAlive() && !e.isSpectator() && e.squaredDistanceTo(getX(), getY(), getZ()) <= ATTRACT_RADIUS * ATTRACT_RADIUS);
-        ServerPlayerEntity owner = getOwner(sw);
-        // 物理伤害来源（mob_attack，归属主人）
-        RegistryKey<DamageType> dmgKey = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, new Identifier("minecraft", "mob_attack"));
-        for (LivingEntity t : targets) {
-            // 白名单 / 主人豁免（伤害与吸附均豁免）
-            if (owner != null && WhitelistUtils.isProtected(owner, t)) continue;
-            if (t.getUuid().equals(ownerUuid)) continue;
-            // 拉向球：方向 × 力度
-            Vec3d to = new Vec3d(getX() - t.getX(), getY() - (t.getY() + t.getHeight() * 0.5), getZ() - t.getZ());
-            double dist = to.length();
-            if (dist < 0.05) continue;
-            // 力度随距离微调（近处弱、远处强一点），保证“明显位移但不爆冲”
-            double factor = MathHelper.clamp(dist / ATTRACT_RADIUS, 0.15, 1.0);
-            Vec3d pull = to.normalize().multiply(PULL_STRENGTH * factor);
-            t.setVelocity(t.getVelocity().add(pull.x, pull.y, pull.z));
+    /**
+     * 拴人：对落点捕获的每个目标，6 格内自由；超出 6 格按「超出距离」线性拉回锚点，
+     * 绝不允许超过 8 格（硬封）。纯控制、无伤害。全服务端判定。
+     */
+    private void applyTether(ServerWorld sw) {
+        if (tetherCenter == null || tetheredTargets.isEmpty()) return;
+        double cx = tetherCenter.x, cy = tetherCenter.y, cz = tetherCenter.z;
+        java.util.Iterator<UUID> it = tetheredTargets.iterator();
+        while (it.hasNext()) {
+            UUID id = it.next();
+            Entity e = sw.getEntity(id);
+            if (!(e instanceof LivingEntity t) || !t.isAlive() || t.isSpectator()) {
+                it.remove(); // 死亡 / 离线 / 无效 → 移除，不再处理
+                continue;
+            }
+            if (WhitelistUtils.isProtected(ownerUuid, sw, t)) continue; // 白名单豁免（owner 离线也保守保护玩家/宠物）
+            double tx = t.getX(), ty = t.getY() + t.getHeight() * 0.5, tz = t.getZ();
+            double dx = tx - cx, dy = ty - cy, dz = tz - cz;
+            double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (dist <= TETHER_SOFT_RADIUS || dist < 1.0e-4) continue; // 6 格内自由活动
+            double inv = 1.0 / dist;
+            double over = dist - TETHER_SOFT_RADIUS;
+            double mag = TETHER_PULL_PER_BLOCK * over;                 // 线性拉力：超得越多、拉得越强
+            t.setVelocity(t.getVelocity().add(
+                    -dx * inv * mag,
+                    -dy * inv * mag * TETHER_VERTICAL_DAMP,
+                    -dz * inv * mag));
             t.velocityModified = true;
-            // 15% 减速 1.5s（刷新）；防御：效果未注册时跳过避免 apoli 同步 NPE
-            try {
-                t.addStatusEffect(new StatusEffectInstance(SscAddon.TIDAL_SLOW, 30, 0, false, true, true));
-            } catch (Throwable ignored) {
+            // 硬封：一旦超过 8 格，直接拉回到 8 格球面并抵消向外冲量
+            if (dist > TETHER_HARD_RADIUS) {
+                double k = TETHER_HARD_RADIUS * inv;
+                double nx = cx + dx * k;
+                double ny = cy + dy * k - t.getHeight() * 0.5;
+                double nz = cz + dz * k;
+                t.requestTeleport(nx, ny, nz);
+                t.setVelocity(t.getVelocity().multiply(0.15, 0.6, 0.15));
+                t.velocityModified = true;
             }
-            // 4 点物理伤害（归属主人）
-            if (owner != null) {
-                t.damage(t.getDamageSources().create(dmgKey, owner, owner), PULL_PHYSICAL_DAMAGE);
-            }
-            // 脚底青蓝粒子提示
-            spawnAffectedFootParticles(sw, t);
+            spawnAffectedFootParticles(sw, t); // 被拴目标脚底提示
+        }
+    }
+
+    /** 把当前被拴目标的 entityId 打包发给所有正在追踪本球的客户端（守卫者激光渲染用）。 */
+    private void syncTetherToClients(ServerWorld sw) {
+        java.util.List<Integer> ids = new java.util.ArrayList<>();
+        for (UUID id : tetheredTargets) {
+            Entity e = sw.getEntity(id);
+            if (e != null && e.isAlive()) ids.add(e.getId());
+        }
+        var tracking = net.fabricmc.fabric.api.networking.v1.PlayerLookup.tracking(this);
+        if (tracking.isEmpty()) return;
+        for (ServerPlayerEntity p : tracking) {
+            net.minecraft.network.PacketByteBuf buf = net.fabricmc.fabric.api.networking.v1.PacketByteBufs.create();
+            buf.writeVarInt(this.getId());
+            buf.writeVarInt(ids.size());
+            for (int i : ids) buf.writeVarInt(i);
+            net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(
+                    p, net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking.PACKET_TIDAL_TETHER, buf);
         }
     }
 
@@ -354,37 +394,61 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
 
     private void spawnHoverParticles(ServerWorld sw) {
         double x = getX(), y = getY(), z = getZ();
-        // 双层反向旋转潮涌核心环（收束漩涡）
-        double rot = ticksAlive * 0.3;
-        for (int layer = 0; layer < 2; layer++) {
-            double rr = 0.6 + layer * 0.35;
-            int cnt = 6 + layer * 3;
-            for (int i = 0; i < cnt; i++) {
-                double ang = rot * (layer == 0 ? 1 : -1) + i * (Math.PI * 2 / cnt);
-                double px = x + Math.cos(ang) * rr;
-                double pz = z + Math.sin(ang) * rr;
-                double py = y + Math.sin(ticksAlive * 0.25 + i) * 0.18;
-                sw.spawnParticles((layer == 0) ? CYAN_DUST : LIGHT_BLUE_DUST, px, py, pz, 1, 0, 0, 0, 0.0);
+        // 三个小粒子球绕锚点旋转（120° 均布，各用一种水系配色）
+        double rot = ticksAlive * 0.12;
+        double orbitR = 1.1;
+        for (int k = 0; k < 3; k++) {
+            double a = rot + k * (Math.PI * 2 / 3);
+            double ox = x + Math.cos(a) * orbitR;
+            double oz = z + Math.sin(a) * orbitR;
+            double oy = y + Math.sin(ticksAlive * 0.15 + k * 2.0) * 0.25; // 上下轻微起伏
+            DustParticleEffect col = (k == 0) ? CYAN_DUST : (k == 1) ? BLUE_DUST : LIGHT_BLUE_DUST;
+            for (int i = 0; i < 4; i++) {
+                Vec3d p = randomInSphere(0.22, random);
+                sw.spawnParticles(col, ox + p.x, oy + p.y, oz + p.z, 1, 0, 0, 0, 0.0);
+            }
+            if (random.nextFloat() < 0.4f) {
+                sw.spawnParticles(ParticleTypes.BUBBLE, ox, oy, oz, 1, 0.04, 0.04, 0.04, 0.0);
             }
         }
-        sw.spawnParticles(ParticleTypes.END_ROD, x, y, z, 3, 0.15, 0.2, 0.15, 0.02);
-        sw.spawnParticles(ParticleTypes.GLOW, x, y, z, 1, 0.1, 0.1, 0.1, 0.0);
-        // 向内吸附的气泡（从外圈飞向核心）
-        for (int i = 0; i < 3; i++) {
-            double ang = random.nextDouble() * Math.PI * 2;
-            double rr = ATTRACT_RADIUS * (0.6 + random.nextDouble() * 0.4);
-            double px = x + Math.cos(ang) * rr;
-            double pz = z + Math.sin(ang) * rr;
-            double vx = (x - px) * 0.08, vz = (z - pz) * 0.08;
-            sw.spawnParticles(ParticleTypes.BUBBLE, px, y + 0.2, pz, 0, vx, 0.02, vz, 1.0);
+        // 核心发光
+        sw.spawnParticles(ParticleTypes.END_ROD, x, y, z, 1, 0.08, 0.1, 0.08, 0.0);
+        // 中间生成、随重力慢慢下落的水滴
+        if (ticksAlive % 2 == 0) {
+            double dx = (random.nextDouble() - 0.5) * 0.5;
+            double dz = (random.nextDouble() - 0.5) * 0.5;
+            sw.spawnParticles(ParticleTypes.FALLING_WATER, x + dx, y + 0.15, z + dz, 1, 0.0, 0.0, 0.0, 0.0);
         }
-        // 吸附脉冲（每周期开始：闪环 + 脉冲音）
-        if (attractCycleTick == 0) {
-            for (int i = 0; i < 30; i++) {
-                double ang = i * (Math.PI * 2 / 30);
-                sw.spawnParticles(BLUE_DUST, x + Math.cos(ang) * ATTRACT_RADIUS, y, z + Math.sin(ang) * ATTRACT_RADIUS, 1, 0, 0, 0, 0.0);
+        // 6 格范围提示：公转粒子球（与中央三球同一套视觉语言）
+        spawnBoundaryOrbs(sw);
+    }
+
+    /** 在 6 格软边界处描一圈 dust（落点瞬间一次性闪现，展示拴人范围）。 */
+    private void spawnTetherRing(ServerWorld sw, int count) {
+        double x = getX(), y = getY(), z = getZ();
+        for (int i = 0; i < count; i++) {
+            double ang = i * (Math.PI * 2 / count);
+            sw.spawnParticles(BLUE_DUST,
+                    x + Math.cos(ang) * TETHER_SOFT_RADIUS, y + 0.1, z + Math.sin(ang) * TETHER_SOFT_RADIUS,
+                    1, 0, 0, 0, 0.0);
+        }
+    }
+
+    /** 6 格范围持续提示：几个小粒子球绕 6 格边界公转（与中央三球同一视觉语言）。 */
+    private void spawnBoundaryOrbs(ServerWorld sw) {
+        double x = getX(), y = getY(), z = getZ();
+        double rot = ticksAlive * 0.06;   // 慢速公转
+        int n = 6;                          // 6 个球均布在 6 格边界
+        for (int k = 0; k < n; k++) {
+            double a = rot + k * (Math.PI * 2 / n);
+            double ox = x + Math.cos(a) * TETHER_SOFT_RADIUS;
+            double oz = z + Math.sin(a) * TETHER_SOFT_RADIUS;
+            double oy = y + Math.sin(ticksAlive * 0.12 + k) * 0.3; // 上下起伏
+            DustParticleEffect col = (k % 3 == 0) ? CYAN_DUST : (k % 3 == 1) ? BLUE_DUST : LIGHT_BLUE_DUST;
+            for (int i = 0; i < 3; i++) {
+                Vec3d p = randomInSphere(0.2, random);
+                sw.spawnParticles(col, ox + p.x, oy + p.y, oz + p.z, 1, 0, 0, 0, 0.0);
             }
-            sw.playSound(null, x, y, z, SoundEvents.ENTITY_FISHING_BOBBER_SPLASH, SoundCategory.PLAYERS, 0.7f, 0.8f);
         }
     }
 
@@ -459,8 +523,14 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
         nbt.putDouble("DirY", flyDir.y);
         nbt.putDouble("DirZ", flyDir.z);
         nbt.putDouble("Speed", currentSpeed);
-        nbt.putInt("AttractCount", attractCount);
-        nbt.putInt("AttractCycle", attractCycleTick);
+        if (tetherCenter != null) {
+            nbt.putDouble("TetherX", tetherCenter.x);
+            nbt.putDouble("TetherY", tetherCenter.y);
+            nbt.putDouble("TetherZ", tetherCenter.z);
+        }
+        NbtList tl = new NbtList();
+        for (UUID id : tetheredTargets) tl.add(net.minecraft.nbt.NbtHelper.fromUuid(id));
+        nbt.put("Tethered", tl);
         if (ownerUuid != null) nbt.putUuid("Owner", ownerUuid);
     }
 
@@ -475,8 +545,16 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
         double dz = nbt.contains("DirZ") ? nbt.getDouble("DirZ") : 1;
         flyDir = new Vec3d(dx, dy, dz).normalize();
         currentSpeed = nbt.contains("Speed") ? nbt.getDouble("Speed") : FLY_SPEED;
-        attractCount = nbt.contains("AttractCount") ? nbt.getInt("AttractCount") : 0;
-        attractCycleTick = nbt.contains("AttractCycle") ? nbt.getInt("AttractCycle") : 0;
+        if (nbt.contains("TetherX")) {
+            tetherCenter = new Vec3d(nbt.getDouble("TetherX"), nbt.getDouble("TetherY"), nbt.getDouble("TetherZ"));
+        }
+        tetheredTargets.clear();
+        if (nbt.contains("Tethered")) {
+            NbtList tl = nbt.getList("Tethered", NbtElement.INT_ARRAY_TYPE);
+            for (int i = 0; i < tl.size(); i++) {
+                tetheredTargets.add(net.minecraft.nbt.NbtHelper.toUuid(tl.get(i)));
+            }
+        }
         if (nbt.containsUuid("Owner")) ownerUuid = nbt.getUuid("Owner");
     }
 
@@ -504,5 +582,10 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
     /** 主人是否仍持有该球（供管理器查询）。 */
     public boolean isAliveOrActive() {
         return !this.isRemoved();
+    }
+
+    /** 客户端查询：是否处于拴人激活状态（潮涌核心切激活态渲染）。 */
+    public boolean isTetherActive() {
+        return this.dataTracker.get(TETHER_ACTIVE);
     }
 }

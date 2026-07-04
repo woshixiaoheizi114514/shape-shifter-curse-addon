@@ -169,12 +169,14 @@ public final class FluorescentTidalManager {
         s.pendingCd = true;
     }
 
-    /** 取消蓄力（不发射、不进 CD）。 */
+    /** 取消蓄力（被净化打断）：不发射，但进入 60% CD（返还 40%）。 */
     private static void cancelCharge(ServerPlayerEntity player, Session s) {
         applyChargeSpeed(player, false);
         s.state = State.IDLE;
         s.chargeTicks = 0;
         PowerUtils.setResourceValueAndSync(player, TIDAL_STATE, 0);
+        // 被净化打断：返还 40% CD（进 60% CD = 160 × 0.6 = 96t = 4.8 秒）
+        PowerUtils.setResourceValueAndSync(player, FormIdentifiers.SP_SECONDARY_CD, (int)(CD_TICKS * 0.6));
         player.getWorld().playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.BLOCK_BEACON_DEACTIVATE, SoundCategory.PLAYERS, 0.5f, 1.5f);
     }

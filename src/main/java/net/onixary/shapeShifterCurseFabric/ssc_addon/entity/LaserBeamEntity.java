@@ -163,9 +163,9 @@ public class LaserBeamEntity extends Entity {
 
 	// ==================== CHARGE ====================
 	private void tickCharge(ServerWorld sw, ServerPlayerEntity owner, Vec3d aim, Vec3d arrayPos) {
-		// 净化打断：取消，无 CD
+		// 净化打断：取消，返还 40% CD（进 60% CD）
 		if (owner.hasStatusEffect(SscAddon.PURIFIED)) {
-			cancelNoCd(owner);
+			cancelWithInterruptCd(owner);
 			sw.playSound(null, owner.getX(), owner.getY(), owner.getZ(),
 					SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.PLAYERS, 1.0f, 1.2f);
 			this.discard();
@@ -294,6 +294,15 @@ public class LaserBeamEntity extends Entity {
 		if (owner != null) {
 			owner.removeStatusEffect(SscAddon.ROOTED);
 			PowerUtils.setResourceValueAndSync(owner, LASER_STATE, 0);
+		}
+	}
+
+	/** 被净化打断时取消：返还 40% CD（进 60% CD = 400 × 0.6 = 240t = 12 秒）。 */
+	private void cancelWithInterruptCd(ServerPlayerEntity owner) {
+		if (owner != null) {
+			owner.removeStatusEffect(SscAddon.ROOTED);
+			PowerUtils.setResourceValueAndSync(owner, LASER_STATE, 0);
+			PowerUtils.setResourceValueAndSync(owner, FormIdentifiers.SP_PRIMARY_CD, (int)(CD_TICKS * 0.6));
 		}
 	}
 

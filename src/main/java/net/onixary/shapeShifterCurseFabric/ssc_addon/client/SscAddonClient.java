@@ -77,7 +77,27 @@ public class SscAddonClient implements ClientModInitializer {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler2, client2) -> {
 			ErosionBrandClientState.clear();
 			MancianimaMarkClientState.clear();
+			net.onixary.shapeShifterCurseFabric.ssc_addon.client.renderer.TidalTetherBeamRenderer.clear();
 		});
+
+		// 荧光幼灵「潮汐束缚」守卫者激光：服务端同步被拴目标 entityId，客户端逐帧画光束
+		ClientPlayNetworking.registerGlobalReceiver(
+				net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking.PACKET_TIDAL_TETHER,
+				(client, handler, buf, responseSender) -> {
+					int orbId = buf.readVarInt();
+					int count = buf.readVarInt();
+					if (count < 0 || count > 64) return;
+					int[] ids = new int[count];
+					for (int i = 0; i < count; i++) ids[i] = buf.readVarInt();
+					client.execute(() -> {
+						if (client.world == null) return;
+						net.onixary.shapeShifterCurseFabric.ssc_addon.client.renderer.TidalTetherBeamRenderer
+								.update(orbId, ids, client.world.getTime() + 20);
+					});
+				});
+		// 逐帧渲染潮汐束缚光束（守卫者激光样式）
+		net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(
+				net.onixary.shapeShifterCurseFabric.ssc_addon.client.renderer.TidalTetherBeamRenderer::render);
 
 		// 修复跨存档颜色变白：cloth-config 里的自定义颜色是全局存储，但服务端 PlayerSkinComponent 按存档独立。
 		// 进入新世界/服务器时，主动把本地 cloth-config 的颜色状态重发给当前服务端，避免新存档拿到默认白色。
@@ -288,7 +308,7 @@ public class SscAddonClient implements ClientModInitializer {
 		EntityRendererRegistry.register(SscAddon.WITCH_FAMILIAR_ENTITY, WitchFamiliarRenderer::new);
 		// 荧光幼灵：潮汐球用 FlyingItemEntityRenderer 渲染潮涌方块作发光核心（对齐 red 火球标准）；
 		// 法阵激光用自定义渲染器画发光法阵 + 穿墙光柱（自发光、粗彩带）
-		EntityRendererRegistry.register(SscAddon.TIDAL_ORB_ENTITY, ctx -> new net.minecraft.client.render.entity.FlyingItemEntityRenderer<>(ctx, 1.0F, false));
+		EntityRendererRegistry.register(SscAddon.TIDAL_ORB_ENTITY, net.onixary.shapeShifterCurseFabric.ssc_addon.client.renderer.TidalOrbRenderer::new);
 		EntityRendererRegistry.register(SscAddon.LASER_BEAM_ENTITY, FluorescentLaserRenderer::new);
 
 		// 寄生果蝠形态种子量能量条 HUD
