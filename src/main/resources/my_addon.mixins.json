@@ -60,6 +60,8 @@
                    "input.ViewRateLimitMixin",
                    "render.TrueInvisibilityArmorMixin",
                    "render.MistFormHeldItemMixin",
+                   "render.LivingEntityRendererShadowFixMixin",
+                   "render.PowerHolderComponentShadowFixMixin",
                     "client.MinecraftClientSetScreenMixin",
                    "client.SoundManagerDeafenMixin",
                    "client.TransformingControllerFeralAnimMixin",

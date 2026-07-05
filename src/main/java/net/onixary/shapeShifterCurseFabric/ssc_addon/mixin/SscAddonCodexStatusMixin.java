@@ -20,8 +20,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(CodexData.class)
 public class SscAddonCodexStatusMixin {
 
-	@Inject(method = "getPlayerStatusText", at = @At("HEAD"), cancellable = true)
+	@Inject(method = "getPlayerStatusText", at = @At("RETURN"), cancellable = true)
 	private static void getPlayerStatusText(PlayerEntity player, CallbackInfoReturnable<Text> cir) {
+		// 原版逻辑已完整执行。原版仅在「无任何特殊状态」时返回 codex.status.normal 的内容；
+		// 感染中 / 诅咒之月日（白天 before_moon、夜晚 under_moon）等状态由原版正常返回，此处不接管，保留原版文案。
+		// 仅当原版返回 normal（即无特殊状态）且玩家处于附属特定形态时，才替换为形态专属文案。
+		Text originalReturn = cir.getReturnValue();
+		if (originalReturn == null) {
+			return;
+		}
+		String normalText = Text.translatable("codex.status.normal").getString();
+		if (!normalText.equals(originalReturn.getString())) {
+			// 原版命中了 infected / before_moon / under_moon 等状态，保留原版返回值不动
+			return;
+		}
 		PlayerFormComponent component = RegPlayerFormComponent.PLAYER_FORM.get(player);
 		if (component != null) {
 			IForm currentForm = component.nowForm;
@@ -38,7 +50,8 @@ public class SscAddonCodexStatusMixin {
 							cir.setReturnValue(Text.translatable("codex.status.my_addon.snow_fox_sp_status"));
 					case "familiar_fox_red" ->
 							cir.setReturnValue(Text.translatable("codex.status.my_addon.familiar_fox_red_status"));
-					default -> cir.setReturnValue(Text.translatable("codex.status.normal"));
+					// 其它形态（含原版形态）保持原版返回的 normal，不再强制覆盖
+					default -> {}
 				}
 			}
 		}
