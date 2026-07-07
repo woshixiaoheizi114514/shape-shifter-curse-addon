@@ -52,6 +52,8 @@ public class SpUpgradeItem extends Item {
 		registerUpgrade("shape-shifter-curse", "anubis_wolf_3", "my_addon", "anubis_wolf_sp");
 		// 吸血蝙蝠：原版蝙蝠三阶段永久态 → desmodus（月髓环 + 诅咒之月夜进化）
 		registerUpgrade("shape-shifter-curse", "bat_3", "my_addon", "bat_desmodus");
+		// 风灵：原版豹猫永久形态 ocelot_3 → 风灵（月髓环 + 诅咒之月夜进化）
+		registerUpgrade("shape-shifter-curse", "ocelot_3", "my_addon", "ocelot_sp");
 		// 进化使魔（SSCA 路线）→ 灵界之主：需 50 级解锁两分支后才允许（门控在 finishUsing）
 		registerUpgrade("my_addon", "upgrade_familiar_fox", "my_addon", "familiar_fox_sp");
 	}

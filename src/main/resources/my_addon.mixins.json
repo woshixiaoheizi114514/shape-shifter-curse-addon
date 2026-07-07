@@ -66,7 +66,8 @@
                    "client.TransformingControllerFeralAnimMixin",
                    "client.CreativePotionStackMixin",
                    "client.FamiliarFoxManaBarGateMixin",
-                   "client.TailVerticalDragFixMixin"
+                   "client.TailVerticalDragFixMixin",
+                   "client.ClawCrosshairMixin"
                ],
     "injectors":  {
                       "defaultRequire":  1

@@ -264,6 +264,13 @@ public class SscAddonClient implements ClientModInitializer {
 			client.execute(() -> MancianimaMarkClientState.update(marks));
 		});
 
+		// 风灵「疾风连爪」：接收爪击阶段+准星条进度，更新客户端镜像
+		ClientPlayNetworking.registerGlobalReceiver(net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking.PACKET_CLAW_STATE, (client, handler, buf, responseSender) -> {
+			int phase = buf.readInt();
+			float progress = buf.readFloat();
+			client.execute(() -> net.onixary.shapeShifterCurseFabric.ssc_addon.client.ClawClientState.update(phase, progress));
+		});
+
 		// 注册白名单 GUI S2C 同步包接收器：收到后打开/刷新 WhitelistManageScreen
 		ClientPlayNetworking.registerGlobalReceiver(net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking.PACKET_WHITELIST_GUI_SYNC, (client, handler, buf, responseSender) -> {
 			boolean customMode = buf.readBoolean();
@@ -370,6 +377,8 @@ public class SscAddonClient implements ClientModInitializer {
 
 		// SSCA 美西螈漩涡蓄力 - 按键检测器
 		VortexChargeClient.register();
+		// 风灵「疾风连爪」 - 左键按住检测器
+		net.onixary.shapeShifterCurseFabric.ssc_addon.client.WindSpiritClawClient.register();
 		// 荧光幼灵技能按键检测器（主要=潮汐波动 / 次要=水盾）
 		FluorescentKeyClient.register();
 

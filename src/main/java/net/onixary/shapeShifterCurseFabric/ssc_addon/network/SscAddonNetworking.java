@@ -26,6 +26,9 @@ public class SscAddonNetworking {
 	public static final Identifier PACKET_MANCIANIMA_TELEPORT = new Identifier("my_addon", "mancianima_teleport");
 	/** 契灵 - 主要技能：三段标记。无 payload，服务端根据当前状态分支。 */
 	public static final Identifier PACKET_MANCIANIMA_PRIMARY = new Identifier("my_addon", "mancianima_primary");
+	/** 风灵「疾风连爪」：C2S 上报左键按住(boolean)；S2C 同步爪击阶段(int)+准星条进度(float)。 */
+	public static final Identifier PACKET_CLAW_HOLD = new Identifier("my_addon", "claw_hold");
+	public static final Identifier PACKET_CLAW_STATE = new Identifier("my_addon", "claw_state");
 
 	// ===== 白名单 GUI 网络包 =====
 	/** S2C：服务端把调用者当前白名单 UUID 集合推给客户端，用于打开/刷新 GUI。payload: int n + n*UUID */
@@ -91,6 +94,14 @@ public class SscAddonNetworking {
 	/** 玩家退服时调用：清理限频时间戳，防止僵尸 UUID 长期积累。 */
 	public static void onPlayerDisconnect(UUID uuid) {
 		LAST_WHITELIST_PACKET_TICK.remove(uuid);
+	}
+
+	/** 风灵「疾风连爪」：同步爪击阶段(phase)与准星条进度给客户端。 */
+	public static void syncClawState(net.minecraft.server.network.ServerPlayerEntity player, int phase, float crosshairProgress) {
+		net.minecraft.network.PacketByteBuf buf = net.fabricmc.fabric.api.networking.v1.PacketByteBufs.create();
+		buf.writeInt(phase);
+		buf.writeFloat(crosshairProgress);
+		ServerPlayNetworking.send(player, PACKET_CLAW_STATE, buf);
 	}
 
 	public static void registerServerReceivers() {
@@ -176,6 +187,12 @@ public class SscAddonNetworking {
 		});
 		ServerPlayNetworking.registerGlobalReceiver(PACKET_VORTEX_RELEASE, (server, player, handler, buf, responseSender) -> {
 			server.execute(() -> net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexChargeManager.release(player));
+		});
+
+		// 风灵「疾风连爪」：客户端上报左键按住状态
+		ServerPlayNetworking.registerGlobalReceiver(PACKET_CLAW_HOLD, (server, player, handler, buf, responseSender) -> {
+			boolean hold = buf.readBoolean();
+			server.execute(() -> net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindSpiritClawManager.setHolding(player, hold));
 		});
 
 		// 荧光幼灵技能按键：主要（法阵激光）/ 次要（潮汐波动）

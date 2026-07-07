@@ -74,6 +74,10 @@ public class FormUtils {
 		return isForm(entity, FormIdentifiers.WILD_CAT_SP);
 	}
 
+	public static boolean isOcelotSP(LivingEntity entity) {
+		return isForm(entity, FormIdentifiers.OCELOT_SP);
+	}
+
 	public static boolean isAxolotlSP(LivingEntity entity) {
 		return isForm(entity, FormIdentifiers.AXOLOTL_SP);
 	}
