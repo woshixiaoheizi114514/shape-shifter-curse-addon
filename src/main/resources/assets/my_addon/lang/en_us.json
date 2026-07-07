@@ -814,9 +814,9 @@
     "text.ssc_addon.bar_editor.confirm.discard":  "Discard",
     "text.ssc_addon.bar_editor.confirm.keep":  "Keep editing",
 
-    "origin.my_addon.form_ocelot_sp.name": "Wind Spirit",
-    "origin.my_addon.form_ocelot_sp.description": "A special ocelot variant freed from the hunting stance, regaining the power to sprint freely and tearing prey apart with gale-like consecutive claw strikes.",
-    "my_addon.form_ocelot_sp.model_name": "Wind Spirit",
-    "advancements.my_addon.on_transform_ocelot_sp.title": "Wind Spirit",
-    "advancements.my_addon.on_transform_ocelot_sp.description": "Transform into Wind Spirit for the first time"
+    "origin.my_addon.form_ocelot_wind_spirit.name": "Wind Spirit",
+    "origin.my_addon.form_ocelot_wind_spirit.description": "A special ocelot variant freed from the hunting stance, regaining the power to sprint freely and tearing prey apart with gale-like consecutive claw strikes.",
+    "my_addon.form_ocelot_wind_spirit.model_name": "Wind Spirit",
+    "advancements.my_addon.on_transform_ocelot_wind_spirit.title": "Wind Spirit",
+    "advancements.my_addon.on_transform_ocelot_wind_spirit.description": "Transform into Wind Spirit for the first time"
 }

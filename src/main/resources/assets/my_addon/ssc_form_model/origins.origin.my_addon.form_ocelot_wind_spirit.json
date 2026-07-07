@@ -1,9 +1,9 @@
 {
   "load_priority": 0,
 
-  "name": "my_addon.form_ocelot_sp.model_name",
+  "name": "my_addon.form_ocelot_wind_spirit.model_name",
   "layer": "origins:origin",
-  "form": "my_addon:form_ocelot_sp",
+  "form": "my_addon:form_ocelot_wind_spirit",
 
   "wide_only": true,
 

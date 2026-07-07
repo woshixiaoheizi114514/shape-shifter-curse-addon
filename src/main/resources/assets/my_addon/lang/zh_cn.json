@@ -816,9 +816,9 @@
     "text.ssc_addon.bar_editor.confirm.discard":  "放弃",
     "text.ssc_addon.bar_editor.confirm.keep":  "继续编辑",
 
-    "origin.my_addon.form_ocelot_sp.name": "风灵",
-    "origin.my_addon.form_ocelot_sp.description": "豹猫挣脱狩猎姿态束缚后的特殊变体形态，重获自由疾跑之力，以疾风般的连续爪击撕裂猎物。",
-    "my_addon.form_ocelot_sp.model_name": "风灵",
-    "advancements.my_addon.on_transform_ocelot_sp.title": "风灵",
-    "advancements.my_addon.on_transform_ocelot_sp.description": "首次变成风灵"
+    "origin.my_addon.form_ocelot_wind_spirit.name": "风灵",
+    "origin.my_addon.form_ocelot_wind_spirit.description": "豹猫挣脱狩猎姿态束缚后的特殊变体形态，重获自由疾跑之力，以疾风般的连续爪击撕裂猎物。",
+    "my_addon.form_ocelot_wind_spirit.model_name": "风灵",
+    "advancements.my_addon.on_transform_ocelot_wind_spirit.title": "风灵",
+    "advancements.my_addon.on_transform_ocelot_wind_spirit.description": "首次变成风灵"
 }

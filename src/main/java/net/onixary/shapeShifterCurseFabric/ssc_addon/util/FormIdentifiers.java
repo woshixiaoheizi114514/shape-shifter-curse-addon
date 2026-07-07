@@ -10,8 +10,8 @@ public class FormIdentifiers {
 	public static final Identifier SNOW_FOX_SP = new Identifier("my_addon", "snow_fox_sp");
 	public static final Identifier ALLAY_SP = new Identifier("my_addon", "allay_sp");
 	public static final Identifier WILD_CAT_SP = new Identifier("my_addon", "wild_cat_sp");
-	// 风灵（月髓环豹猫）——原版豹猫永久形态 ocelot_3 经月髓环进化获得
-	public static final Identifier OCELOT_SP = new Identifier("my_addon", "ocelot_sp");
+	// 风灵（月髓环豹猫）——原版豹猫永久形态 ocelot_3 经月髓环进化获得；注册名 ocelot_wind_spirit
+	public static final Identifier OCELOT_SP = new Identifier("my_addon", "ocelot_wind_spirit");
 	public static final Identifier AXOLOTL_SP = new Identifier("my_addon", "axolotl_sp");
 	// 荧光幼灵（Axolotl Fluorescent）- SP美西螈经进化石进化获得
 	public static final Identifier AXOLOTL_FLUORESCENT = new Identifier("my_addon", "axolotl_fluorescent");
