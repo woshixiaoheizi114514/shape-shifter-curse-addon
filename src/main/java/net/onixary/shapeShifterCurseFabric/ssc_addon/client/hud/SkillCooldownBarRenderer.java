@@ -41,10 +41,6 @@ public class SkillCooldownBarRenderer implements HudRenderCallback {
 	private static final Identifier TEX_FULL = new Identifier("my_addon", "textures/gui/skill_cd_bar_full.png");
 	private static final String SSCA_FORM_NAMESPACE = "my_addon";
 
-	// 快捷栏尺寸
-	private static final int HOTBAR_WIDTH = 182;
-	// CD条与快捷栏间距
-	private static final int GAP = 3;
 	// 技能触发偏差阈值：实际值与期望衰减值偏差超过此值视为技能触发
 	private static final int DEVIATION_THRESHOLD = 2;
 
