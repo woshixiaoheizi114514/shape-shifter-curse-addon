@@ -358,6 +358,8 @@ public class SscAddon implements ModInitializer {
 		registerEntitySpawnHandlers();
 		registerPlayerEventHandlers();
 		registerStunOrphanCleanup();
+		// 风灵被动：落地风涌（事件监听）；风压领域由 mixin（WindSpiritProjectilePressureMixin）驱动
+		net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindSpiritLandingSurgeManager.register();
 		registerFeralBodyYawSync();
 		registerServerLifecycleHandlers();
 		registerMancianimaEvents();
@@ -654,6 +656,7 @@ public class SscAddon implements ModInitializer {
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexChargeManager.tick(player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindSpiritClawManager.tick(player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindDashManager.tick(player);
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindSpiritLandingSurgeManager.tick(player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.PlayDeadAbsorptionManager.tick(player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.FluorescentTidalManager.tick(player);
 			// 冥裁者凋零阶梯 / 凋零抗性追踪（凋零持续时长分层 + tick 跳过计数）
@@ -1168,6 +1171,7 @@ public class SscAddon implements ModInitializer {
 			SnowFoxSpFrostStorm.clearPlayer(uuid);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindSpiritClawManager.onPlayerDisconnect(handler.player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindDashManager.onPlayerDisconnect(handler.player);
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindSpiritLandingSurgeManager.onPlayerDisconnect(handler.player);
 			AnubisWolfSpDeathDomain.clearPlayer(handler.player);
 			AnubisWolfSpSummonWolves.clearPlayer(uuid);
 			AllaySPTotem.clearPlayer(handler.player);
