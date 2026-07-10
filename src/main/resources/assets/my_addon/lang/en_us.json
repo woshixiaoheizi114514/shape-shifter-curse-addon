@@ -839,5 +839,7 @@
     "advancements.ssc_addon.tide_spirit_power.title": "Fluorescent Axolotl",
     "advancements.ssc_addon.tide_spirit_power.description": "Collect all chapters of the Azure Harbor Chronicle: Fluorescent Axolotl",
     "message.ssc_addon.tide_spirit.whisper": "A surge of intense emotion floods your heart; memories that are not your own stir within your mind. Perhaps you should sleep well on a Cursed Moon night to make sense of it all.",
-    "message.ssc_addon.tide_spirit.become_aling": "Where... am I? Where is my home?"
+    "message.ssc_addon.tide_spirit.become_aling": "Where... am I? Where is my home?",
+    "advancements.my_addon.on_transform_axolotl_fluorescent.title": "Fluorescent Axolotl",
+    "advancements.my_addon.on_transform_axolotl_fluorescent.description": "Transform into the Fluorescent Axolotl for the first time"
 }
