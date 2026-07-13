@@ -119,6 +119,8 @@ public abstract class AbstractFeralForm extends Form_FeralBase {
 			case ANIM_STATE_MINING -> createMiningController();
 			case ANIM_STATE_ATTACK -> createAttackController();
 			case ANIM_STATE_FLYING, ANIM_STATE_FALL_FLYING -> createFallFlyingController();
+			// 原版 AnimStateEnum 新增 ANIM_STATE_CRAWL 等枚举时，回落到 idle（与原版 Form_FeralBase default 一致）
+			default -> createIdleController();
 		};
 	}
 

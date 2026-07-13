@@ -1,16 +1,19 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    " S ",
-    "STS",
-    " S "
+    "SGS",
+    "GEG",
+    "#G#"
   ],
   "key": {
     "S": {
       "item": "minecraft:string"
     },
-    "T": {
-      "item": "minecraft:totem_of_undying"
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "E": {
+      "item": "minecraft:ender_eye"
     }
   },
   "result": {
