@@ -26,7 +26,8 @@ public class TailVerticalDragFixMixin {
 
     @Redirect(method = "afterRender",
             at = @At(value = "INVOKE",
-                    target = "Lnet/minecraft/entity/player/PlayerEntity;getVelocity()Lnet/minecraft/util/math/Vec3d;"))
+                    target = "Lnet/minecraft/entity/player/PlayerEntity;getVelocity()Lnet/minecraft/util/math/Vec3d;"),
+            require = 0)
     private Vec3d ssc_addon$fixRemoteTailVerticalDrag(PlayerEntity player) {
         Vec3d velocity = player.getVelocity();
         double realVerticalDelta = player.getY() - player.prevY;
