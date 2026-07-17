@@ -55,6 +55,13 @@ public class SscAddonNetworking {
 	/** C2S：美西螈漩涡释放（提前释放）。无 payload。 */
 	public static final Identifier PACKET_VORTEX_RELEASE = new Identifier("my_addon", "vortex_release");
 
+	/** C2S：进化美西螈主技能「投掷水矛」按键。无 payload。 */
+	public static final Identifier PACKET_UPGRADE_AXOLOTL_SPEAR = new Identifier("my_addon", "upgrade_axolotl_spear");
+	/** C2S：进化美西螈次技能「涡流引导」按键。无 payload。 */
+	public static final Identifier PACKET_UPGRADE_AXOLOTL_VORTEX = new Identifier("my_addon", "upgrade_axolotl_vortex");
+	/** S2C：进化美西螈「投掷水矛」蓄力期手持水矛渲染状态（对追踪者+自身广播）。payload: UUID + boolean charging */
+	public static final Identifier PACKET_SPEAR_CHARGE_STATE = new Identifier("my_addon", "spear_charge_state");
+
 	// ===== 荧光幼灵技能网络包 =====
 	/** C2S：荧光幼灵主要技能（法阵激光）按键。无 payload。 */
 	public static final Identifier PACKET_FLUO_LASER = new Identifier("my_addon", "fluo_laser_key");
@@ -115,6 +122,18 @@ public class SscAddonNetworking {
 		buf.writeInt(phase);
 		buf.writeDouble(targetY);
 		ServerPlayNetworking.send(player, PACKET_DASH_STATE, buf);
+	}
+
+	/** 进化美西螈「投掷水矛」：向追踪该玩家的客户端 + 玩家自身广播蓄力手持水矛渲染状态。 */
+	public static void syncSpearChargeState(net.minecraft.server.network.ServerPlayerEntity player, boolean charging) {
+		net.minecraft.network.PacketByteBuf buf = net.fabricmc.fabric.api.networking.v1.PacketByteBufs.create();
+		buf.writeUuid(player.getUuid());
+		buf.writeBoolean(charging);
+		for (net.minecraft.server.network.ServerPlayerEntity viewer :
+				net.fabricmc.fabric.api.networking.v1.PlayerLookup.tracking(player)) {
+			ServerPlayNetworking.send(viewer, PACKET_SPEAR_CHARGE_STATE, net.fabricmc.fabric.api.networking.v1.PacketByteBufs.copy(buf));
+		}
+		ServerPlayNetworking.send(player, PACKET_SPEAR_CHARGE_STATE, buf);
 	}
 
 	public static void registerServerReceivers() {
@@ -200,6 +219,14 @@ public class SscAddonNetworking {
 		});
 		ServerPlayNetworking.registerGlobalReceiver(PACKET_VORTEX_RELEASE, (server, player, handler, buf, responseSender) -> {
 			server.execute(() -> net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexChargeManager.release(player));
+		});
+
+		// SSCA 进化美西螈技能：主「投掷水矛」 / 次「涡流引导」
+		ServerPlayNetworking.registerGlobalReceiver(PACKET_UPGRADE_AXOLOTL_SPEAR, (server, player, handler, buf, responseSender) -> {
+			server.execute(() -> net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WaterSpearLeapManager.onKeyPress(player));
+		});
+		ServerPlayNetworking.registerGlobalReceiver(PACKET_UPGRADE_AXOLOTL_VORTEX, (server, player, handler, buf, responseSender) -> {
+			server.execute(() -> net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexGuideManager.onKeyPress(player));
 		});
 
 		// 风灵「疾风连爪」：客户端上报左键按住状态

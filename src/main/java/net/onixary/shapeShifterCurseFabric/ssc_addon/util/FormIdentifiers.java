@@ -19,6 +19,8 @@ public class FormIdentifiers {
 	// 朔望舍身爆炸蓄力标记资源（0/1，同步客户端；蓄力期门控 sneaking_speed_up，禁 shift 潜行加速）
 	public static final Identifier OCELOT_NOVA_CHARGING = new Identifier("my_addon", "form_ocelot_nova_charging");
 	public static final Identifier AXOLOTL_SP = new Identifier("my_addon", "axolotl_sp");
+	// 进化美西螈（Upgrade Axolotl）- SSCA 进化加点路线起点形态，基于原版美西螈 axolotl_3，能力按进化树解锁
+	public static final Identifier UPGRADE_AXOLOTL = new Identifier("my_addon", "upgrade_axolotl");
 	// 荧光幼灵（Axolotl Fluorescent）- SP美西螈经进化石进化获得
 	public static final Identifier AXOLOTL_FLUORESCENT = new Identifier("my_addon", "axolotl_fluorescent");
 	// 阿澪（Aling）- 特殊形态，基于荧光幼灵，技能一致，专属模型/贴图，颜色不可改

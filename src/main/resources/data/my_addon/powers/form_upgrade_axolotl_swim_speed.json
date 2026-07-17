@@ -1,0 +1,14 @@
+{
+    "type": "apoli:conditioned_attribute",
+    "modifier": {
+        "attribute": "additionalentityattributes:generic.water_speed",
+        "name": "Additional swim speed",
+        "value": 1.5,
+        "operation": "multiply_base"
+    },
+    "tick_rate": 5,
+    "condition": {
+        "type": "ssc_addon:has_talent",
+        "talent_id": "aquatic_adapt"
+    }
+}

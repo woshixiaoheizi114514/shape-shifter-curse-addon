@@ -56,6 +56,8 @@ public class SpUpgradeItem extends Item {
 		registerUpgrade("shape-shifter-curse", "ocelot_3", "my_addon", "ocelot_wind_spirit");
 		// 进化使魔（SSCA 路线）→ 灵界之主：需 50 级解锁两分支后才允许（门控在 finishUsing）
 		registerUpgrade("my_addon", "upgrade_familiar_fox", "my_addon", "familiar_fox_sp");
+		// 进化美西螈（SSCA 路线）→ SP 美西螈：需 50 级解锁两分支后才允许（门控在 finishUsing）
+		registerUpgrade("my_addon", "upgrade_axolotl", "my_addon", "axolotl_sp");
 	}
 
 	public SpUpgradeItem(Settings settings) {
@@ -90,10 +92,9 @@ public class SpUpgradeItem extends Item {
 				return stack;
 			}
 			Identifier targetFormId = getTargetFormId(player);
-			// 进化使魔门控：必须先解锁两个 50 级分支（灵界之主 + 契灵）才能用月髓环继续进化
-			if (targetFormId != null && targetFormId.equals(new Identifier("my_addon", "familiar_fox_sp"))
-					&& player instanceof ServerPlayerEntity spFox
-					&& !EvolutionManager.canUpgradeFoxEvolve(spFox)) {
+			// 进化形态门控（使魔 / 美西螈等所有 SSCA 进化路线起点形态）：必须先解锁全部分支才能用月髃环继续进化
+			if (targetFormId != null && player instanceof ServerPlayerEntity spEvo
+					&& !EvolutionManager.canUpgradeFoxEvolve(spEvo)) {
 				player.sendMessage(Text.translatable("message.ssc_addon.evolution.fail.branches_locked").formatted(Formatting.RED, Formatting.ITALIC), false);
 				world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.PLAYERS, 1.0F, 1.0F);
 				return stack;

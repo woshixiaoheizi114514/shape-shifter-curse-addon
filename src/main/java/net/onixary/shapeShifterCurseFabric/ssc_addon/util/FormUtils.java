@@ -82,14 +82,19 @@ public class FormUtils {
 		return isForm(entity, FormIdentifiers.AXOLOTL_SP);
 	}
 
+	/** 进化美西螈（SSCA 进化路线起点形态）判断。 */
+	public static boolean isUpgradeAxolotl(LivingEntity entity) {
+		return isForm(entity, FormIdentifiers.UPGRADE_AXOLOTL);
+	}
+
 	/** 荧光幼灵（Axolotl Fluorescent）形态判断（含阿澪 Aling，技能一致）。 */
 	public static boolean isAxolotlFluorescent(LivingEntity entity) {
 		return isForm(entity, FormIdentifiers.AXOLOTL_FLUORESCENT) || isForm(entity, FormIdentifiers.AXOLOTL_ALING);
 	}
 
-	/** 需要保湿的形态判断（SP 美西螈 或 荧光幼灵），用于加湿器生效判定。 */
+	/** 需要保湿的形态判断（SP 美西螈 / 进化美西螈 / 荧光幼灵），用于加湿器生效判定。 */
 	public static boolean isMoistureDependent(LivingEntity entity) {
-		return isAxolotlSP(entity) || isAxolotlFluorescent(entity);
+		return isAxolotlSP(entity) || isUpgradeAxolotl(entity) || isAxolotlFluorescent(entity);
 	}
 
 	public static boolean isAnubisWolfSP(LivingEntity entity) {

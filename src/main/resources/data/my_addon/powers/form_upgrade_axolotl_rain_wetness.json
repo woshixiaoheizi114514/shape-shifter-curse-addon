@@ -1,0 +1,17 @@
+{
+    "type": "apoli:action_over_time",
+    "interval": 20,
+    "entity_action": {
+        "type": "apoli:gain_air",
+        "value": 60
+    },
+    "condition": {
+        "type": "apoli:and",
+        "conditions": [
+            { "type": "apoli:in_rain" },
+            { "type": "apoli:exposed_to_sky" }
+        ]
+    },
+    "name": "Rain Hydration",
+    "description": "Slowly regain moisture (air) when exposed to rain."
+}

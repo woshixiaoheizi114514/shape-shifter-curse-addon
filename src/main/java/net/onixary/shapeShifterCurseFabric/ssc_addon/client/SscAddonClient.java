@@ -78,6 +78,21 @@ public class SscAddonClient implements ClientModInitializer {
 			ErosionBrandClientState.clear();
 			MancianimaMarkClientState.clear();
 			net.onixary.shapeShifterCurseFabric.ssc_addon.client.renderer.TidalTetherBeamRenderer.clear();
+			UpgradeAxolotlSpearRenderState.clear();
+		});
+
+		// 进化美西螈「投掷水矛」蓄力期：客户端取消右键预测（放置方块 / 使用物品），避免鬼影
+		net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+			if (world.isClient && UpgradeAxolotlSpearRenderState.isCharging(player.getUuid())) {
+				return net.minecraft.util.ActionResult.FAIL;
+			}
+			return net.minecraft.util.ActionResult.PASS;
+		});
+		net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.register((player, world, hand) -> {
+			if (world.isClient && UpgradeAxolotlSpearRenderState.isCharging(player.getUuid())) {
+				return net.minecraft.util.TypedActionResult.fail(player.getStackInHand(hand));
+			}
+			return net.minecraft.util.TypedActionResult.pass(player.getStackInHand(hand));
 		});
 
 		// 荧光幼灵「潮汐束缚」守卫者激光：服务端同步被拴目标 entityId，客户端逐帧画光束
@@ -285,6 +300,14 @@ public class SscAddonClient implements ClientModInitializer {
             client.execute(() -> net.onixary.shapeShifterCurseFabric.ssc_addon.client.DashClientState.update(phase, targetY));
         });
 
+        // 进化美西螈「投掷水矛」蓄力期手持水矛渲染状态（主机 + 客机一致）
+        ClientPlayNetworking.registerGlobalReceiver(net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking.PACKET_SPEAR_CHARGE_STATE, (client, handler, buf, responseSender) -> {
+            java.util.UUID id = buf.readUuid();
+            boolean charging = buf.readBoolean();
+            LOGGER.warn("[进化美西螈] 客户端收到蓄力状态 id={} charging={}", id, charging);
+            client.execute(() -> UpgradeAxolotlSpearRenderState.set(id, charging));
+        });
+
 		// 注册白名单 GUI S2C 同步包接收器：收到后打开/刷新 WhitelistManageScreen
 		ClientPlayNetworking.registerGlobalReceiver(net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking.PACKET_WHITELIST_GUI_SYNC, (client, handler, buf, responseSender) -> {
 			boolean customMode = buf.readBoolean();
@@ -319,6 +342,8 @@ public class SscAddonClient implements ClientModInitializer {
 
 		// 注册冰球渲染器（使用雪球材质）和冰风暴渲染器（粒子效果，空渲染器）
 		EntityRendererRegistry.register(SscAddon.FROST_BALL_ENTITY, FlyingItemEntityRenderer::new);
+		// 进化美西螈「投掷水矛」直线水矛：3D 投掷态模型，沿飞行方向摆正
+		EntityRendererRegistry.register(SscAddon.THROWN_WATER_SPEAR_ENTITY, net.onixary.shapeShifterCurseFabric.ssc_addon.client.renderer.ThrownWaterSpearEntityRenderer::new);
 		EntityRendererRegistry.register(SscAddon.FROST_STORM_ENTITY, EmptyEntityRenderer::new);
 		EntityRendererRegistry.register(SscAddon.FOX_FIREBALL_ENTITY, ctx -> new net.minecraft.client.render.entity.FlyingItemEntityRenderer<>(ctx, 1F, true));
 		EntityRendererRegistry.register(SscAddon.FRIEND_MARKER_ENTITY_TYPE, FlyingItemEntityRenderer::new);
@@ -395,6 +420,8 @@ public class SscAddonClient implements ClientModInitializer {
 
 		// SSCA 美西螈漩涡蓄力 - 按键检测器
 		VortexChargeClient.register();
+		// SSCA 进化美西螈技能 - 主「投掷水矛」/ 次「涡流引导」按键检测器
+		UpgradeAxolotlSkillClient.register();
 		// 风灵「疾风连爪」 - 左键按住检测器
 		net.onixary.shapeShifterCurseFabric.ssc_addon.client.WindSpiritClawClient.register();
 		// 风灵「风之冲刺」 - 主技能键检测器 + 悬浮期绿色落点预览

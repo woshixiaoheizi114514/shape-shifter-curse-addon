@@ -128,6 +128,15 @@ public class SscAddon implements ModInitializer {
 					.trackRangeBlocks(64).trackedUpdateRate(10)
 					.build()
 	);
+	// 进化美西螈「投掷水矛」直线水矛投射物（无重力匀速）
+	public static final EntityType<net.onixary.shapeShifterCurseFabric.ssc_addon.entity.ThrownWaterSpearEntity> THROWN_WATER_SPEAR_ENTITY = Registry.register(
+			Registries.ENTITY_TYPE,
+			new Identifier("ssc_addon", "thrown_water_spear"),
+			FabricEntityTypeBuilder.<net.onixary.shapeShifterCurseFabric.ssc_addon.entity.ThrownWaterSpearEntity>create(SpawnGroup.MISC, net.onixary.shapeShifterCurseFabric.ssc_addon.entity.ThrownWaterSpearEntity::new)
+					.dimensions(EntityDimensions.fixed(0.4f, 0.4f))
+					.trackRangeBlocks(64).trackedUpdateRate(10)
+					.build()
+	);
 	// red 狐火火球投射物
 	public static final EntityType<net.onixary.shapeShifterCurseFabric.ssc_addon.entity.FoxFireballEntity> FOX_FIREBALL_ENTITY = Registry.register(
 			Registries.ENTITY_TYPE,
@@ -506,6 +515,13 @@ public class SscAddon implements ModInitializer {
 		RegPlayerForms.registerPlayerForm(axolotlForm);
 		RegPlayerForms.registerPlayerFormGroup(new NormalGroup(new Identifier("my_addon", "group_axolotl_sp")).registerForm(1, 5, axolotlForm));
 
+		// 进化美西螈（Upgrade Axolotl）- SSCA 进化加点路线起点形态，复用 SP 美西螈模型/动画，能力按进化树解锁
+		Form_Axolotl3 upgradeAxolotlForm = new Form_Axolotl3(FormIdentifiers.UPGRADE_AXOLOTL);
+		upgradeAxolotlForm.formFlag(NoInstinct, NoCursedMoonEffect, SpecialForm, InhibitorImmune);
+		upgradeAxolotlForm.applyScaleFunc(NormalForm.NORMAL_SCALE_FUNC_BUILDER.apply(1.0f, 1.0f));
+		RegPlayerForms.registerPlayerForm(upgradeAxolotlForm);
+		RegPlayerForms.registerPlayerFormGroup(new NormalGroup(new Identifier("my_addon", "group_upgrade_axolotl")).registerForm(1, 5, upgradeAxolotlForm));
+
 		// 荧光幼灵（Axolotl Fluorescent）- SP美西螈经进化石进化获得，复用美西螈模型/动画，体型缩小到 0.75
 		Form_AxolotlFluorescent fluorescentForm = new Form_AxolotlFluorescent(FormIdentifiers.AXOLOTL_FLUORESCENT);
 		fluorescentForm.formFlag(NoInstinct, NoCursedMoonEffect, SpecialForm, InhibitorImmune);
@@ -584,6 +600,8 @@ public class SscAddon implements ModInitializer {
 		// 风灵（月髓环豹猫）——完全复用原版豹猫 Form_Ocelot3 的模型与动画，四足兽形，可疾跑；核心为「疾风连爪」左键连击技能
 		Form_Ocelot3 ocelotSpForm = new Form_Ocelot3(FormIdentifiers.OCELOT_SP);
 		ocelotSpForm.formFlag(NoInstinct, NoCursedMoonEffect, SpecialForm, InhibitorImmune);
+		// 标记为 FERAL 四足兽体——原版 AdjustItemHoldFeatureRendererMixin/MouthItemFeature 依此把副手物品渲染到背上而非手臂
+		ocelotSpForm.bodyType(net.onixary.shapeShifterCurseFabric.player_form.PlayerFormBodyType.FERAL);
 		// 缩放与原版豹猫 ocelot_3 一致（RegPlayerForms 里 OCELOT_3 用 0.75f/0.6f）
 		ocelotSpForm.applyScaleFunc(NormalForm.NORMAL_SCALE_FUNC_BUILDER.apply(0.75f, 0.6f));
 		RegPlayerForms.registerPlayerForm(ocelotSpForm);
@@ -592,6 +610,8 @@ public class SscAddon implements ModInitializer {
 		// 朔望（月髓环豹猫）——与风灵同源，复用原版豹猫 Form_Ocelot3 模型动画，四足兽形；定位九命灵猫（生存/不死），技能待设计
 		Form_Ocelot3 ocelotNovaForm = new Form_Ocelot3(FormIdentifiers.OCELOT_NOVA);
 		ocelotNovaForm.formFlag(NoInstinct, NoCursedMoonEffect, SpecialForm, InhibitorImmune);
+		// 标记为 FERAL 四足兽体——与风灵同理，触发原版副手→背渲染
+		ocelotNovaForm.bodyType(net.onixary.shapeShifterCurseFabric.player_form.PlayerFormBodyType.FERAL);
 		// 缩放与原版豹猫 ocelot_3 一致（与风灵相同 0.75f/0.6f）
 		ocelotNovaForm.applyScaleFunc(NormalForm.NORMAL_SCALE_FUNC_BUILDER.apply(0.75f, 0.6f));
 		RegPlayerForms.registerPlayerForm(ocelotNovaForm);
@@ -682,6 +702,9 @@ public class SscAddon implements ModInitializer {
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindSpiritClawManager.tick(player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindDashManager.tick(player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindSpiritLandingSurgeManager.tick(player);
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WaterSpearLeapManager.tick(player);
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexGuideManager.tick(player);
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.AxolotlWaterSpurtHandler.tick(player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.PlayDeadAbsorptionManager.tick(player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.FluorescentTidalManager.tick(player);
 			// 冥裁者凋零阶梯 / 凋零抗性追踪（凋零持续时长分层 + tick 跳过计数）
@@ -1185,6 +1208,20 @@ public class SscAddon implements ModInitializer {
 			}
 		});
 
+		// 进化美西螈「投掷水矛」蓄力期：服务端禁用右键放置方块 / 使用方块与物品（蓄力时不能做其它交互）
+		net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+			if (!world.isClient && net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WaterSpearLeapManager.isCharging(player.getUuid())) {
+				return net.minecraft.util.ActionResult.FAIL;
+			}
+			return net.minecraft.util.ActionResult.PASS;
+		});
+		net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.register((player, world, hand) -> {
+			if (!world.isClient && net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WaterSpearLeapManager.isCharging(player.getUuid())) {
+				return net.minecraft.util.TypedActionResult.fail(player.getStackInHand(hand));
+			}
+			return net.minecraft.util.TypedActionResult.pass(player.getStackInHand(hand));
+		});
+
 
 		// 玩家断线时清理所有静态状态Map，防止内存泄漏和重连后状态错乱
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
@@ -1197,6 +1234,9 @@ public class SscAddon implements ModInitializer {
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindSpiritClawManager.onPlayerDisconnect(handler.player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindDashManager.onPlayerDisconnect(handler.player);
 			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WindSpiritLandingSurgeManager.onPlayerDisconnect(handler.player);
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.WaterSpearLeapManager.onPlayerDisconnect(handler.player);
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.VortexGuideManager.onPlayerDisconnect(uuid);
+			net.onixary.shapeShifterCurseFabric.ssc_addon.ability.AxolotlWaterSpurtHandler.onPlayerDisconnect(uuid);
 			AnubisWolfSpDeathDomain.clearPlayer(handler.player);
 			AnubisWolfSpSummonWolves.clearPlayer(uuid);
 			AllaySPTotem.clearPlayer(handler.player);

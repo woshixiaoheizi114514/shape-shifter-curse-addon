@@ -61,6 +61,8 @@
                    "input.ViewRateLimitMixin",
                    "render.TrueInvisibilityArmorMixin",
                    "render.MistFormHeldItemMixin",
+                   "render.UpgradeAxolotlFirstPersonSpearMixin",
+                   "render.UpgradeAxolotlSpearArmPoseMixin",
                    "render.LivingEntityRendererShadowFixMixin",
                    "render.PowerHolderComponentShadowFixMixin",
                    "render.WaterSpearInventoryMixin",

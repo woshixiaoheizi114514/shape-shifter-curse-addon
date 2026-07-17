@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 /**
  * 修复：多人下「其它玩家」的兽形（FERAL）尾巴在被攻击一次后持续下翘，直到该玩家移动/碰撞才恢复。
  *
- * <p><b>根因</b>：原版 {@link DefaultModelAnimationSystem#afterRender} 用
+ * <p><b>根因</b>：原版 {@link DefaultModelAnimationSystem#finishRender} 用
  * {@code player.getVelocity().y} 作为尾巴垂直拖拽（{@code tailDragAmountVertical} → 骨骼 setRotX）的输入。
  * 对「远程玩家」（非本地客户端模拟的玩家），客户端<b>不跑物理 tick 衰减其 velocity</b>，
  * 而服务端击退包会把 velocity.y 设为非零；该值之后一直卡住不归零，导致垂直拖拽恒为非零、尾巴持续下翘。
@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin(DefaultModelAnimationSystem.class)
 public class TailVerticalDragFixMixin {
 
-    @Redirect(method = "afterRender",
+    @Redirect(method = "finishRender",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/entity/player/PlayerEntity;getVelocity()Lnet/minecraft/util/math/Vec3d;"),
             require = 0)

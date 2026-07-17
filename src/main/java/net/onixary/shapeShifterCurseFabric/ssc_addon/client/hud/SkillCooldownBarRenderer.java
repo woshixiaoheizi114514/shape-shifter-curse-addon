@@ -165,8 +165,24 @@ public class SkillCooldownBarRenderer implements HudRenderCallback {
 			secondaryY = anchor.getRight() + config.cdSecondaryBarPosOffsetY;
 		}
 
-		renderCdBarWithNumber(context, player, primaryCdId, primaryX, barY, true, false);
-		renderCdBarWithNumber(context, player, secondaryCdId, secondaryX, secondaryY, false, false);
+		// 进化美西螈：主动技能未解锁前不显示对应 CD 条（主=投掷水矛 / 副=涡流引导）
+		boolean showPrimary = true;
+		boolean showSecondary = true;
+		if (formId.equals(FormIdentifiers.UPGRADE_AXOLOTL)) {
+			try {
+				net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionComponent evo =
+						net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.RegEvolutionComponent.EVOLUTION.get(player);
+				showPrimary = evo.isUnlocked(net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.AxolotlTree.NODE_WATER_SPEAR);
+				showSecondary = evo.isUnlocked(net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.AxolotlTree.NODE_VORTEX_GUIDE);
+			} catch (Exception ignored) {
+				// 组件暂不可用：保守不显示，避免误显示空 CD 条
+				showPrimary = false;
+				showSecondary = false;
+			}
+		}
+
+		if (showPrimary) renderCdBarWithNumber(context, player, primaryCdId, primaryX, barY, true, false);
+		if (showSecondary) renderCdBarWithNumber(context, player, secondaryCdId, secondaryX, secondaryY, false, false);
 	}
 
 	/**

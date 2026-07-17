@@ -1,0 +1,11 @@
+{
+    "type": "apoli:night_vision",
+    "strength": 1.0,
+    "condition": {
+        "type": "apoli:and",
+        "conditions": [
+            { "type": "apoli:submerged_in", "fluid": "minecraft:water" },
+            { "type": "ssc_addon:has_talent", "talent_id": "aquatic_adapt" }
+        ]
+    }
+}

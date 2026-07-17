@@ -1,0 +1,19 @@
+{
+    "type": "apoli:action_over_time",
+    "interval": 40,
+    "entity_action": {
+        "type": "apoli:gain_air",
+        "value": -3
+    },
+    "condition": {
+        "type": "apoli:and",
+        "conditions": [
+            { "type": "apoli:on_block" },
+            { "type": "apoli:submerged_in", "fluid": "water", "inverted": true },
+            { "type": "apoli:in_rain", "inverted": true },
+            { "type": "ssc_addon:has_talent", "talent_id": "become_water", "inverted": true }
+        ]
+    },
+    "name": "Extra Moisture Drain",
+    "description": "Before unlocking Become Water: extra 0.5x moisture drain on land (total 1.5x)."
+}

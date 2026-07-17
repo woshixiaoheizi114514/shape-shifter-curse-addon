@@ -89,17 +89,19 @@ public class EvolutionStoneItem extends Item {
 				// 允许原版三阶段美西螈使用进化石进化为荧光幼灵
 				else if (playerFormID.equals(new Identifier("shape-shifter-curse", "axolotl_3"))) {
 					targetFormId = new Identifier("my_addon", "axolotl_fluorescent");
-					canEvolve = true;
-				}				// 允许原版豹猫永久形态 ocelot_3 使用进化石进化为朔望（与月髓环→风灵并行存在，不同道具不冲突）
+					canEvolve = true;				}
+				// 允许进化美西螈（SSCA 路线）使用进化石进化为荧光幼灵：需 50 级解锁两分支后才允许（门控在下方）
+				else if (playerFormID.equals(new Identifier("my_addon", "upgrade_axolotl"))) {
+					targetFormId = new Identifier("my_addon", "axolotl_fluorescent");
+					canEvolve = true;				}				// 允许原版豹猫永久形态 ocelot_3 使用进化石进化为朔望（与月髓环→风灵并行存在，不同道具不冲突）
 				else if (playerFormID.equals(new Identifier("shape-shifter-curse", "ocelot_3"))) {
 					targetFormId = new Identifier("my_addon", "ocelot_nova");
 					canEvolve = true;
 				}			}
 
 			if (canEvolve) {
-				// 进化使魔门控：必须先解锁两个 50 级分支（灵界之主 + 契灵）才能用进化石继续进化
+				// 进化形态门控（使魔 / 美西螈等所有 SSCA 进化路线起点形态）：必须先解锁全部分支才能用进化石继续进化
 				if (player instanceof ServerPlayerEntity spStone
-						&& new Identifier("my_addon", "upgrade_familiar_fox").equals(playerFormID)
 						&& !EvolutionManager.canUpgradeFoxEvolve(spStone)) {
 					player.sendMessage(Text.translatable("message.ssc_addon.evolution.fail.branches_locked").formatted(Formatting.RED, Formatting.ITALIC), false);
 					world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.PLAYERS, 1.0F, 1.0F);
