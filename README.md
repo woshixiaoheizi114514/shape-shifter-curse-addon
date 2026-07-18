@@ -8,4 +8,5 @@ mod资产归Mangzai-120所有
 注：如果是第一次构建，会先下载gradle-8.x.x-bin.zip，下载速度有时会很慢(慢到fabric模组搞得像构建Architectury API模组似的)，甚至因为下载失败导致构建失败，如果你下了PCL的话复制下载网址用然后用PCL下载一下（注:我没接到广告，我提这一点单纯是pcl下载gradle压缩包比cmd下载快多了），之后再将gradle压缩包拖到对应目录（参考图片，打开对应版本号的目录（包括里面那一个看起来像一堆乱码的东西），然后把里面的两个文件删了，把gradle压缩包放进去（别放错版本））
 <img width="1670" height="941" alt="屏幕截图 2026-07-18 200012" src="https://github.com/user-attachments/assets/f0813ff4-57ad-4bb4-982a-fcf75f70aea7" />
 <img width="1670" height="941" alt="屏幕截图 2026-07-18 200023" src="https://github.com/user-attachments/assets/b8158659-d774-4400-8bd0-34d62844f82d" />
+警告：从github下载或者手动构建的mod无法用启动器更新（HMCL能识别mod并对应上mc百科链接,但是不会导向curseforge或者modrinth页面;PCL则是完全无法识别并对应上mc百科/curseforge/modrinth链接，如更换更晚的构建版或者转为正式版请手动替换mod文件）
 注：由于ssc1.10.0变动极大，如使用构建版，请确保自己有能排查崩溃原因的能力或者工具（最重要的一点：发关于ssca崩溃的issue一定要发完整日志或者崩溃日志，不要只发图片！发关于ssca崩溃的issue一定要发完整日志或者崩溃日志，不要只发图片！发关于ssca崩溃的issue一定要发完整日志或者崩溃日志，不要只发图片！重要的事情提三次!（我可不会算卦，你不发崩溃日志的话那issue等于没法））
