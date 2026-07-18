@@ -62,7 +62,6 @@
                    "render.TrueInvisibilityArmorMixin",
                    "render.MistFormHeldItemMixin",
                    "render.UpgradeAxolotlFirstPersonSpearMixin",
-                   "render.UpgradeAxolotlSpearArmPoseMixin",
                    "render.UpgradeAxolotlThirdPersonSpearMixin",
                    "render.LivingEntityRendererShadowFixMixin",
                    "render.PowerHolderComponentShadowFixMixin",
@@ -73,6 +72,7 @@
                    "client.CreativePotionStackMixin",
                    "client.FamiliarFoxManaBarGateMixin",
                    "client.TailVerticalDragFixMixin",
+                   "client.UpgradeAxolotlSpearChargeArmMixin",
                    "client.ClawCrosshairMixin",
                    "client.NovaSprintLockMixin"
                ],

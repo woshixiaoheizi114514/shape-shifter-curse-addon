@@ -43,10 +43,8 @@ public class UpgradeAxolotlFirstPersonSpearMixin {
 		if (hand == Hand.MAIN_HAND && player != null
 				&& UpgradeAxolotlSpearRenderState.isCharging(player.getUuid())) {
 			matrices.push();
-			// 举矛过肩、明显抡起蓄力（第一人称：举高 + 后仰；数值可实机微调）
-			matrices.translate(0.05, 0.45, 0.05);
-			matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-58.0F));
-			matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(6.0F));
+			// 轻微后仰增强蓄力感（位置交给 display + THROW_SPEAR 手臂姿势，避免把矛推离手心）
+			matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-10.0F));
 		}
 	}
 

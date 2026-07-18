@@ -50,9 +50,8 @@ public class UpgradeAxolotlThirdPersonSpearMixin {
 			MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
 		if (arm == entity.getMainArm() && UpgradeAxolotlSpearRenderState.isCharging(entity.getUuid())) {
 			matrices.push();
-			// 举矛过肩、接近三叉戟蓄力（第三人称：举更高、更竖直、轻微后仰；数值可实机微调）
-			matrices.translate(0.0, 0.6, -0.1);
-			matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-20.0F));
+			// 轻微后仰增强蓄力感（举矛过肩由 THROW_SPEAR 手臂姿势负责，避免把矛推离手心）
+			matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-10.0F));
 		}
 	}
 

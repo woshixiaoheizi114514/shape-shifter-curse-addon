@@ -6,6 +6,6 @@
   "overrides": [
     { "predicate": { "ssc_addon:held": 1 }, "model": "ssc_addon:item/water_spear_3d" },
     { "predicate": { "ssc_addon:throwing": 1 }, "model": "ssc_addon:item/water_spear_throwing" },
-    { "predicate": { "custom_model_data": 1 }, "model": "ssc_addon:item/water_spear_throwing" }
+    { "predicate": { "custom_model_data": 1 }, "model": "ssc_addon:item/water_spear_skill" }
   ]
 }
