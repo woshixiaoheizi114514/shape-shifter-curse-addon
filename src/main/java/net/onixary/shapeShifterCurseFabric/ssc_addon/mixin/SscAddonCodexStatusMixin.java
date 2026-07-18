@@ -10,8 +10,6 @@ import net.onixary.shapeShifterCurseFabric.player_form.utils.RegPlayerFormCompon
 import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.AxolotlTree;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionComponent;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionNode;
-import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionRoute;
-import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.EvolutionRegistry;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.FamiliarFoxTree;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.RegEvolutionComponent;
 import net.onixary.shapeShifterCurseFabric.ssc_addon.util.FormIdentifiers;
