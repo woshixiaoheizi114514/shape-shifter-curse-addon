@@ -1,5 +1,5 @@
 mod资产归Mangzai-120所有
-这个main分支只是用于手动构建用（因为每次都得改build.gradle太麻烦了，输入法记忆功能又导致不方便故意打错模组名字）
+这个main分支只是用于手动构建用（因为每次都得改build.gradle太麻烦了，输入法记忆功能又导致不方便故意打错模组名字）（mod代码都是原先的ssca分支的，还没动过）
 关于手动构建：1.由于目前ssc没发1.10.0正式版所以得先手动构建一个ssc的构建吧（和第2、3步相同，最好用同时期的构建版，也能帮忙排查是否兼容（前提你能看出来））
 然后将ssc1.10.0构建版放在这里（文件具体名称参考vscode选择的这一块）<img width="1920" height="1080" alt="屏幕截图 2026-07-18 194315" src="https://github.com/user-attachments/assets/b6e5b87e-c288-4e7a-8573-d12c7c4a95b7" />
 2.打开cmd（windowspowershell也行），然后输入cd(空格)(gradle和源代码那一堆乱七八糟的东西放的目录)切换目录，不然构建不了（毕竟你总不可能把那一大堆东西放在用户文件夹或者system32里）<img width="1115" height="628" alt="屏幕截图 2026-07-18 194450" src="https://github.com/user-attachments/assets/92f17899-403c-4e98-998a-3e819dd7a57d" />
