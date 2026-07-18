@@ -36,6 +36,8 @@
                    "player.SscAddonMistDimensionsMixin",
                    "entity.RedFoxThrowDistanceMixin",
                    "item.ScreenHandlerMixin",
+                   "SscAddonCodexStatusMixin",
+                   "PlayerFormComponentSyncGuardMixin",
                    "entity.SscAddonEntityIgnitionMixin",
                    "entity.SscAddonEntityMixin",
                    "entity.SeedEnergyEatFoodMixin",
