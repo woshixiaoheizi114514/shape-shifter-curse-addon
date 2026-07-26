@@ -92,8 +92,8 @@ dependencies {
     // Fabric API
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-    // Shape Shifter Curse Main Mod（原版源码目录：幻型者诅咒原版_official，onixary 官方 clone 干净版）
-    modImplementation files("../幻型者诅咒原版_official/build/libs/shape-shifter-curse-fabric-${project.ssc_version}.jar")
+    // Shape Shifter Curse Main Mod
+    modImplementation files("../幻形者诅咒原版_official/build/libs/shape-shifter-curse-fabric-${project.ssc_version}.jar")
     
     // Player Animator
     modImplementation "dev.kosmx.player-anim:player-animation-lib-fabric:${project.player_anim}"
