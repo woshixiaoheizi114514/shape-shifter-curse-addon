@@ -45,7 +45,7 @@ jobs:
         id: cache-ssc-jar
         uses: actions/cache@v4
         with:
-          path: ../幻型者诅咒原版_official/build/libs
+          path: ../幻形者诅咒原版_official/build/libs
           key: ssc-jar-${{ steps.addon_props.outputs.ssc_version }}
 
       # 关键：附属依赖原版 jar；仅当上面的原版 jar 缓存未命中时，才 clone 并构建原版 SSC。
