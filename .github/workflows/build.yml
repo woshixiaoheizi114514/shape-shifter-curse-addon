@@ -55,7 +55,7 @@ jobs:
           echo "::group::Clone 原版 SSC"
           cd "$GITHUB_WORKSPACE/.."
           git clone --depth 1 https://github.com/onixary/shape-shifter-curse-fabric.git 幻型者诅咒原版_official
-          cd 幻型者诅咒原版_official
+          cd 幻形者诅咒原版_official
           chmod +x ./gradlew
           echo "::endgroup::"
 
@@ -88,7 +88,7 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::原版 SSC jar（从父级原版目录取）"
-          SSC_DIR="../幻型者诅咒原版_official/build/libs"
+          SSC_DIR="../幻形者诅咒原版_official/build/libs"
           if [ ! -d "$SSC_DIR" ]; then
             echo "::error::原版 SSC 构建目录不存在: $SSC_DIR"
             exit 1
