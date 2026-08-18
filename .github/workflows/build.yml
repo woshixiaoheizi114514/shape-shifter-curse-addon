@@ -54,7 +54,7 @@ jobs:
         run: |
           echo "::group::Clone 原版 SSC"
           cd "$GITHUB_WORKSPACE/.."
-          git clone --depth 1 https://github.com/onixary/shape-shifter-curse-fabric.git 幻型者诅咒原版_official
+          git clone --depth 1 https://github.com/onixary/shape-shifter-curse-fabric.git 幻形者诅咒原版_official
           cd 幻形者诅咒原版_official
           chmod +x ./gradlew
           echo "::endgroup::"
