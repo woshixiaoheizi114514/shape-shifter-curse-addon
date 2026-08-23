@@ -332,17 +332,6 @@ public class SscAddonClient implements ClientModInitializer {
             client.execute(() -> UpgradeAxolotlSpearRenderState.set(id, charging));
         });
 
-        // 寒棘狐蓄力状态（事件级）：客户端本地自算汇聚粒子（替代服务端持续粒子波，网络包 -97%）
-        ClientPlayNetworking.registerGlobalReceiver(net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking.PACKET_FROST_SPIKE_CHARGE_VISUAL, (client, handler, buf, responseSender) -> {
-            java.util.UUID id = buf.readUuid();
-            int mode = buf.readVarInt();
-            client.execute(() -> net.jackcooper.shapeShifterCurseAddon.client.FrostSpikeChargeVisualClient.setMode(id, mode));
-        });
-        net.jackcooper.shapeShifterCurseAddon.client.FrostSpikeChargeVisualClient.register();
-        // 断线清理蓄力可视状态
-        ClientPlayConnectionEvents.DISCONNECT.register((handler2, client2) ->
-                net.jackcooper.shapeShifterCurseAddon.client.FrostSpikeChargeVisualClient.clear());
-
 		// 注册白名单 GUI S2C 同步包接收器：收到后打开/刷新 WhitelistManageScreen
 		ClientPlayNetworking.registerGlobalReceiver(net.onixary.shapeShifterCurseFabric.ssc_addon.network.SscAddonNetworking.PACKET_WHITELIST_GUI_SYNC, (client, handler, buf, responseSender) -> {
 			boolean customMode = buf.readBoolean();
@@ -398,7 +387,7 @@ public class SscAddonClient implements ClientModInitializer {
 		// 进化美西螈「投掷水矛」直线水矛：3D 投掷态模型，沿飞行方向摆正
 		EntityRendererRegistry.register(SscAddon.THROWN_WATER_SPEAR_ENTITY, net.onixary.shapeShifterCurseFabric.ssc_addon.client.renderer.ThrownWaterSpearEntityRenderer::new);		// 寒棘狐「冰刺」冰锥：3D 自定义 item model（CustomModelData 切 3 阶段材质），沿朝向摆正
 		EntityRendererRegistry.register(SscAddon.FROST_THORN_ENTITY, net.jackcooper.shapeShifterCurseAddon.client.renderer.FrostThornEntityRenderer::new);
-		EntityRendererRegistry.register(SscAddon.FROST_ARRAY_ENTITY, net.jackcooper.shapeShifterCurseAddon.client.renderer.FrostArrayRenderer::new);		EntityRendererRegistry.register(SscAddon.FROST_STORM_ENTITY, EmptyEntityRenderer::new);		EntityRendererRegistry.register(SscAddon.FOX_FIREBALL_ENTITY, net.jackcooper.shapeShifterCurseAddon.client.renderer.FoxFireballRenderer::new);
+		EntityRendererRegistry.register(SscAddon.FROST_ARRAY_ENTITY, net.jackcooper.shapeShifterCurseAddon.client.renderer.FrostArrayRenderer::new);		EntityRendererRegistry.register(SscAddon.FROST_STORM_ENTITY, EmptyEntityRenderer::new);		EntityRendererRegistry.register(SscAddon.FOX_FIREBALL_ENTITY, ctx -> new net.minecraft.client.render.entity.FlyingItemEntityRenderer<>(ctx, 1F, true));
 		EntityRendererRegistry.register(SscAddon.FRIEND_MARKER_ENTITY_TYPE, FlyingItemEntityRenderer::new);
 		EntityRendererRegistry.register(SscAddon.CLEAR_MARKER_ENTITY_TYPE, FlyingItemEntityRenderer::new);
 		EntityRendererRegistry.register(SscAddon.INFECTION_SPORE_BOMB_ENTITY, FlyingItemEntityRenderer::new);
@@ -489,7 +478,7 @@ public class SscAddonClient implements ClientModInitializer {
 		VortexChargeClient.register();		// SSCA 月织蛛「织网术」- 主键检测器（潜行切换 / 蓄力 / 释放）
 		net.jackcooper.shapeShifterCurseAddon.client.SpiderMoonWeaverWebClient.register();
 		// SSCA 寒棘狐「冰刺」- 主键检测器（长按蕠力 / 点按发射）
-		net.jackcooper.shapeShifterCurseAddon.client.FrostSpikeClient.register();
+		net.jackcooper.shapeShifterCurseAddon.client.FrostSpikeClient.register();		// SSCA 寒棘狐主技能蓄力 - 客户端镜像粒子生成（S2C 状态包驱动，零持续粒子包）
 		// SSCA 月织蛛二段跳 - 跳跃键空中检测
 		net.jackcooper.shapeShifterCurseAddon.client.SpiderMoonWeaverDoubleJumpClient.register();
 		// SSCA 月织蛛「蛛丝荡漾」- 次键检测器（发射/断丝 + WASD/空格/Shift 输入上报）

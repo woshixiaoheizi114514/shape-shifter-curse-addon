@@ -468,9 +468,8 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
     }
 
     private void spawnHoverParticles(ServerWorld sw) {
-        // 网络优化：悬停粒子已全部移到客户端 TidalOrbRenderer 本地自绘（实体位置客户端已知，
-        // 环绕/公转几何纯时间函数），服务端不再广播——持续粒子网络包归零。
-        // 服务端仅保留增强球 DELAY 期不画粒子的判定语义（渲染器按 isTetherActive 自行判定）。
+        // 悬停粒子已移到客户端 TidalOrbRenderer.spawnHoverParticlesClient 本地自绘（逐行照抄未改参数），
+        // 服务端不再广播——持续粒子网络包归零。此方法保留空壳，ATTRACTING/DELAY 调用点不变。
     }
 
     /** 在 6 格软边界处描一圈 dust（落点瞬间一次性闪现，展示拴人范围）。 */
@@ -484,7 +483,7 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
         }
     }
 
-    // 原 spawnBoundaryOrbs（6 格边界公转球）已移到客户端 TidalOrbRenderer 自绘（网络包归零），此方法删除。
+    // 原 spawnBoundaryOrbs（6 格边界公转球）已并入客户端 TidalOrbRenderer.spawnHoverParticlesClient（照抄未改参数），此方法删除。
 
     private void spawnAffectedFootParticles(ServerWorld sw, LivingEntity t) {
         double fx = t.getX(), fy = t.getY() + 0.05, fz = t.getZ();
@@ -623,6 +622,10 @@ public class TidalOrbEntity extends Entity implements net.minecraft.entity.Flyin
         return this.dataTracker.get(TETHER_ACTIVE);
     }
 
-    /** 软边界半径（客户端渲染器画公转边界球用）。 */
+    /** 客户端渲染器粒子门控：记录本实体 tick 已发过粒子（render 每帧调用，同 tick 多帧只放行一次，
+     *  保证粒子频率与服务端每 tick 一致；非同步字段，仅客户端使用）。 */
+    public int clientParticleGate = -1;
+
+    /** 软边界半径（客户端渲染器画公转边界球用，与服务端 TETHER_SOFT_RADIUS 同值）。 */
     public static double tetherSoftRadius() { return TETHER_SOFT_RADIUS; }
 }
