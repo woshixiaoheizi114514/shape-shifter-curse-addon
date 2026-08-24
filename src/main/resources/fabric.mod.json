@@ -38,6 +38,15 @@
     "modmenu": [
       "net.onixary.shapeShifterCurseFabric.ssc_addon.compat.ModMenuIntegration"
     ],
+    "rei_client": [
+      "net.jackcooper.shapeShifterCurseAddon.compat.rei.SSCA_REIPlugin"
+    ],
+    "jei_mod_plugin": [
+      "net.jackcooper.shapeShifterCurseAddon.compat.jei.SSCA_JEIPlugin"
+    ],
+    "emi": [
+      "net.jackcooper.shapeShifterCurseAddon.compat.emi.SSCA_EMIPlugin"
+    ],
     "cardinal-components-entity": [
       "net.onixary.shapeShifterCurseFabric.ssc_addon.evolution.RegEvolutionComponent",
       "net.jackcooper.shapeShifterCurseAddon.state.RegSpiderMoonWeaverStateComponent"
