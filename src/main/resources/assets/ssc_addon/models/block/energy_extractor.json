@@ -1,0 +1,69 @@
+{
+	"format_version": "1.9.0",
+	"credit": "Single atlas for all faces. UV in 0-16 grid per vanilla convention.",
+	"parent": "block/block",
+	"texture_size": [64, 64],
+	"textures": {
+		"0": "ssc_addon:block/energy_extractor",
+		"particle": "ssc_addon:block/energy_extractor"
+	},
+	"elements": [
+		{
+			"from": [0, 0, 0],
+			"to": [16, 2, 16],
+			"faces": {
+				"north": {"uv": [8, 11.5, 12, 12], "texture": "#0"},
+				"east": {"uv": [8, 11.5, 12, 12], "texture": "#0"},
+				"south": {"uv": [8, 11.5, 12, 12], "texture": "#0"},
+				"west": {"uv": [8, 11.5, 12, 12], "texture": "#0"},
+				"up": {"uv": [8, 12, 12, 16], "texture": "#0"},
+				"down": {"uv": [12, 12, 16, 16], "texture": "#0", "cullface": "down"}
+			}
+		},
+		{
+			"from": [0, 2, 14],
+			"to": [16, 14, 16],
+			"faces": {
+				"north": {"uv": [0, 0, 4, 3], "texture": "#0"},
+				"east": {"uv": [4, 1, 4.5, 4], "texture": "#0"},
+				"south": {"uv": [0, 3, 4, 6], "texture": "#0", "cullface": "south"},
+				"west": {"uv": [4, 4, 4.5, 7], "texture": "#0"},
+				"up": {"uv": [12, 12.25, 8, 11.75], "texture": "#0"},
+				"down": {"uv": [4, 6, 0, 6.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [0, 2, 0],
+			"to": [2, 14, 14],
+			"faces": {
+				"north": {"uv": [11.5, 0, 12, 3], "texture": "#0"},
+				"east": {"uv": [8, 0, 11.5, 3], "texture": "#0"},
+				"south": {"uv": [0, 6, 0.5, 9], "texture": "#0"},
+				"west": {"uv": [8, 3, 11.5, 6], "texture": "#0", "cullface": "west"},
+				"up": {"uv": [12, 3.5, 11.5, 0], "texture": "#0"},
+				"down": {"uv": [1, 6, 0.5, 9.5], "texture": "#0"}
+			}
+		},
+		{
+			"from": [14, 2, 0],
+			"to": [16, 14, 14],
+			"faces": {
+				"north": {"uv": [11.75, 0, 12.25, 3], "texture": "#0"},
+				"east": {"uv": [8.5, 8.5, 12, 11.5], "texture": "#0", "cullface": "east"},
+				"south": {"uv": [0, 6, 0.5, 9], "texture": "#0"},
+				"west": {"uv": [8, 0, 11.5, 3], "texture": "#0"},
+				"up": {"uv": [11.5, 0, 12, 3.5], "texture": "#0"},
+				"down": {"uv": [0, 6, 0.5, 9.5], "texture": "#0"}
+			}
+		}
+	],
+	"groups": [
+		{
+			"name": "energy_extractor",
+			"origin": [8, 8, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [0, 1, 2, 3]
+		}
+	]
+}
