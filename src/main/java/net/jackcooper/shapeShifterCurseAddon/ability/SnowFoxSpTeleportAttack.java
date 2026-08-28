@@ -269,62 +269,6 @@ public class SnowFoxSpTeleportAttack {
 	public static void setRegenCooldown(ServerPlayerEntity player, int value) {
 		PowerUtils.setResourceValueAndSync(player, REGEN_COOLDOWN_ID, value);
 	}
-    
-    /*
-    // 旧代码 (保留参考) 已移至PowerUtils
-    
-    private static int getResourceValue(ServerPlayerEntity player) {
-        try {
-            PowerHolderComponent powerHolder = PowerHolderComponent.KEY.get(player);
-            PowerType<?> powerType = PowerTypeRegistry.get(RESOURCE_ID);
-            Power power = powerHolder.getPower(powerType);
-            if (power instanceof VariableIntPower variablePower) {
-                return variablePower.getValue();
-            }
-        } catch (Exception e) {
-        }
-        return 0;
-    }
-    
-    private static void changeResourceValue(ServerPlayerEntity player, int change) {
-        try {
-            PowerHolderComponent powerHolder = PowerHolderComponent.KEY.get(player);
-            PowerType<?> powerType = PowerTypeRegistry.get(RESOURCE_ID);
-            Power power = powerHolder.getPower(powerType);
-            if (power instanceof VariableIntPower variablePower) {
-                int newValue = Math.max(0, Math.min(100, variablePower.getValue() + change));
-                variablePower.setValue(newValue);
-                PowerHolderComponent.sync(player);
-            }
-        } catch (Exception e) {
-        }
-    }
-    
-    public static void setRegenCooldownOld(ServerPlayerEntity player, int value) {
-        try {
-            PowerHolderComponent powerHolder = PowerHolderComponent.KEY.get(player);
-            PowerType<?> powerType = PowerTypeRegistry.get(REGEN_COOLDOWN_ID);
-            Power power = powerHolder.getPower(powerType);
-            if (power instanceof VariableIntPower variablePower) {
-                variablePower.setValue(value);
-                PowerHolderComponent.sync(player);
-            }
-        } catch (Exception e) {
-        }
-    }
-    
-    private static void setPowerCooldown(ServerPlayerEntity player, int ticks) {
-        try {
-            PowerHolderComponent powerHolder = PowerHolderComponent.KEY.get(player);
-            PowerType<?> powerType = PowerTypeRegistry.get(POWER_ID);
-            Power power = powerHolder.getPower(powerType);
-            if (power instanceof CooldownPower cooldownPower) {
-                cooldownPower.setCooldown(ticks);
-            }
-        } catch (Exception e) {
-        }
-    }
-    */
 
 	/**
 	 * 瞬移攻击数据
