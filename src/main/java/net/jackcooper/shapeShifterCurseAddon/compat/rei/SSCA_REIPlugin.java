@@ -13,6 +13,8 @@ import net.minecraft.potion.PotionUtil;
 import net.minecraft.potion.Potions;
 import net.minecraft.util.Identifier;
 import net.jackcooper.shapeShifterCurseAddon.SscAddon;
+import net.jackcooper.shapeShifterCurseAddon.recipe.InfiniteEnergyPotionRecipe;
+import net.jackcooper.shapeShifterCurseAddon.recipe.VenomGlandRecipe;
 import net.onixary.shapeShifterCurseFabric.items.RegCustomPotions;
 
 /**
@@ -53,7 +55,8 @@ public class SSCA_REIPlugin implements REIClientPlugin {
 	 * 毒液腺体配方卡片：8 蜘蛛眼环绕 + 中心剧毒药水（三种瓶型可切换）。
 	 * 使用 SscSpecialCraftingDisplay 以获得支持 NBT 药水的快速转移。
 	 */
-	private static SscSpecialCraftingDisplay venomGlandDisplay() {
+	/** 毒液腺体配方网格：8 蜘蛛眼环绕 + 中心剧毒药水（三种瓶型）。 */
+	static ItemStack[][] venomGlandGrid() {
 		ItemStack[] poisonAlts = new ItemStack[]{
 				PotionUtil.setPotion(new ItemStack(Items.POTION), Potions.POISON),
 				PotionUtil.setPotion(new ItemStack(Items.SPLASH_POTION), Potions.POISON),
@@ -62,14 +65,36 @@ public class SSCA_REIPlugin implements REIClientPlugin {
 		for (int i = 0; i < 9; i++) {
 			grid[i] = (i == 4) ? poisonAlts : new ItemStack[]{new ItemStack(Items.SPIDER_EYE)};
 		}
-		return SscSpecialCraftingDisplay.of(grid, new ItemStack(SscAddon.VENOM_GLAND));
+		return grid;
+	}
+
+	private static SscSpecialCraftingDisplay venomGlandDisplay() {
+		return SscSpecialCraftingDisplay.of(venomGlandGrid(), new ItemStack(SscAddon.VENOM_GLAND));
+	}
+
+	/** REI 自动生成卡片（DefaultCraftingDisplay）识别用：是否 SSCA 特殊配方。 */
+	public static boolean isSscSpecialRecipe(net.minecraft.recipe.Recipe<?> recipe) {
+		return recipe instanceof InfiniteEnergyPotionRecipe
+				|| recipe instanceof VenomGlandRecipe;
+	}
+
+	/** 取特殊配方的 3×3 材料网格（转移复用）；非特殊配方返回 null。 */
+	public static ItemStack[][] gridFor(net.minecraft.recipe.Recipe<?> recipe) {
+		if (recipe instanceof InfiniteEnergyPotionRecipe) {
+			return infiniteEnergyPotionGrid();
+		}
+		if (recipe instanceof VenomGlandRecipe) {
+			return venomGlandGrid();
+		}
+		return null;
 	}
 
 	/**
 	 * 无限压缩能量药水配方卡片：上中月髓环 + 中间行 附魔金苹果/压缩能量药水（三种瓶型）/附魔金苹果。
 	 * 使用 SscSpecialCraftingDisplay 以获得支持 NBT 药水的快速转移。
 	 */
-	private static SscSpecialCraftingDisplay infiniteEnergyPotionDisplay() {
+	/** 无限压缩能量药水配方网格：上中月髓环 + 中间行 附魔金苹果/压缩能量药水（三种瓶型）/附魔金苹果。 */
+	static ItemStack[][] infiniteEnergyPotionGrid() {
 		ItemStack[] feedAlts = new ItemStack[]{
 				PotionUtil.setPotion(new ItemStack(Items.POTION), RegCustomPotions.FEED_POTION),
 				PotionUtil.setPotion(new ItemStack(Items.SPLASH_POTION), RegCustomPotions.FEED_POTION),
@@ -86,6 +111,10 @@ public class SSCA_REIPlugin implements REIClientPlugin {
 		grid[6] = new ItemStack[0];
 		grid[7] = new ItemStack[0];
 		grid[8] = new ItemStack[0];
-		return SscSpecialCraftingDisplay.of(grid, new ItemStack(SscAddon.INFINITE_ENERGY_POTION));
+		return grid;
+	}
+
+	private static SscSpecialCraftingDisplay infiniteEnergyPotionDisplay() {
+		return SscSpecialCraftingDisplay.of(infiniteEnergyPotionGrid(), new ItemStack(SscAddon.INFINITE_ENERGY_POTION));
 	}
 }

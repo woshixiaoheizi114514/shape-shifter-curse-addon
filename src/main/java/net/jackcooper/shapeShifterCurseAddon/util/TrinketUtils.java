@@ -27,8 +27,6 @@ import java.util.function.Predicate;
 public final class TrinketUtils {
     /** 诊断日志：Curios 反射兜底各阶段失败原因（定位 Kilt 类加载器/能力注入问题用）。 */
     private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger("ssc-addon");
-    /** 内容转储只打一次（避免 HUD 每帧刷屏）。 */
-    private static final java.util.concurrent.atomic.AtomicBoolean DUMPED = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     private TrinketUtils() {
     }
@@ -136,36 +134,40 @@ public final class TrinketUtils {
                 LOG.warn("[SSCA] Curios fallback: getCurios() 非 Map（{}）", curiosHandlerMap);
                 return null;
             }
-            // 一次性内容转储：每个 Curios 槽的 id + 槽数 + 每格物品类名（定位「遍历不到书」用）
-            if (DUMPED.compareAndSet(false, true)) {
-                for (Map.Entry<?, ?> e : curiosMap.entrySet()) {
-                    Object sh = e.getValue();
-                    if (sh == null) continue;
-                    StringBuilder sb = new StringBuilder();
-                    for (String getter : new String[]{"getStacks", "getCosmeticStacks"}) {
-                        try {
-                            Object stacks = sh.getClass().getMethod(getter).invoke(sh);
-                            if (stacks instanceof Iterable<?> it) {
-                                for (Object o : it) {
-                                    sb.append(o == null ? "null" : o.getClass().getName()).append(",");
-                                }
-                            }
-                        } catch (Throwable ignored) {
-                        }
-                        sb.append(" | ");
-                    }
-                    LOG.warn("[SSCA] Curios fallback dump: slot={} items=[{}]", e.getKey(), sb);
-                }
-            }
+            // Forge 的 stacks 容器不是 Iterable（IDynamicStackHandler extends IItemHandlerModifiable），
+            // 正确取法：getSlots() 数量 + getStackInSlot(i) 按索引循环（含 cosmetic）。
+            // Kilt 双映射下对象可能非 yarn ItemStack：instanceof 命中直接返回；
+            // 类名相同但类加载器不同的极端情况，用注册名等价比对做最后兜底。
             for (Object stacksHandler : curiosMap.values()) {
                 if (stacksHandler == null) continue;
                 for (String getter : new String[]{"getStacks", "getCosmeticStacks"}) {
                     try {
                         Object stacks = stacksHandler.getClass().getMethod(getter).invoke(stacksHandler);
-                        if (!(stacks instanceof Iterable<?> iterable)) continue;
-                        for (Object o : iterable) {
+                        if (stacks == null) continue;
+                        int slotCount;
+                        try {
+                            slotCount = (int) stacks.getClass().getMethod("getSlots").invoke(stacks);
+                        } catch (NoSuchMethodException e) {
+                            continue; // 非 handler 类型，跳过
+                        }
+                        for (int i = 0; i < slotCount; i++) {
+                            Object o = stacks.getClass().getMethod("getStackInSlot", int.class).invoke(stacks, i);
+                            if (o == null) continue;
                             if (o instanceof ItemStack s && !s.isEmpty() && predicate.test(s)) {
                                 return s;
+                            }
+                            // 双映射兜底：类名一致但加载器不同 → 反射取注册名等价判定
+                            if (!o.getClass().getName().equals("net.minecraft.item.ItemStack")) continue;
+                            try {
+                                Object isEmpty = o.getClass().getMethod("isEmpty").invoke(o);
+                                if (Boolean.TRUE.equals(isEmpty)) continue;
+                                Object item = o.getClass().getMethod("getItem").invoke(o);
+                                Object yarnItem = net.minecraft.registry.Registries.ITEM.get(
+                                        net.minecraft.util.Identifier.tryParse("ssc_addon:moon_dust_spellbook"));
+                                if (item == yarnItem) {
+                                    return (ItemStack) o;
+                                }
+                            } catch (Throwable ignored) {
                             }
                         }
                     } catch (NoSuchMethodException ignored) {

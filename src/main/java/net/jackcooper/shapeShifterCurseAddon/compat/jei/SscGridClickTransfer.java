@@ -94,9 +94,10 @@ public final class SscGridClickTransfer {
 			return Outcome.FAILED;
 		}
 
-		// 预检：背包必须持有全部材料（含 NBT 精确匹配）
+		// 预检仅用于悬浮提示；实际点击不拦截——逐格尽力放置，缺的格子跳过，
+		// 服务端工作台配方校验兑底（与 REI 侧同策略）。
 		if (!hasAllMaterials(player, spec.perSlot())) {
-			return Outcome.NOT_ENOUGH;
+			return checkOnly ? Outcome.NOT_ENOUGH : Outcome.SUCCESS;
 		}
 		if (checkOnly) {
 			return Outcome.SUCCESS;
@@ -120,28 +121,59 @@ public final class SscGridClickTransfer {
 			}
 		}
 
-		// 第二步：按网格把材料逐格放入（含 NBT 的药水按真实栈精确匹配；每格多候选任选其一）
+		// 第二步：按网格逐格放入。放 1 个的正确三步：① 左键整堆拿起；② 右键点合成格
+		//（vanilla 右键=放入 1 个）；③ 光标若还有剩余，左键点回原背包槽（原槽放回不打乱背包）。
 		for (int i = 0; i < 9 && i < spec.perSlot().size(); i++) {
 			List<ItemStack> alternatives = spec.perSlot().get(i);
 			if (alternatives.isEmpty()) {
 				continue;
 			}
+			int srcHandlerSlot = -1;
 			int srcInv = findAnyStack(player, alternatives);
-			if (srcInv < 0) {
-				// 材料中途变了（预检后被移动）：已放材料留在格中（可见无损），报材料不足
-				return Outcome.NOT_ENOUGH;
+			if (srcInv >= 0) {
+				srcHandlerSlot = invToHandler(srcInv);
+			} else {
+				// 背包找不到：从合成格已有同材料堆里与 1 个过来（蜘蛛眼 8 格场景）
+				for (int g = CRAFT_GRID_FIRST; g <= CRAFT_GRID_LAST && srcHandlerSlot < 0; g++) {
+					if (g == CRAFT_GRID_FIRST + i) continue;
+					for (ItemStack alt : alternatives) {
+						if (stackMatches(handler.slots.get(g).getStack(), alt)) {
+							srcHandlerSlot = g;
+							break;
+						}
+					}
+				}
+				if (srcHandlerSlot < 0) {
+					continue; // 缺料跳过，服务端配方校验兑底
+				}
+				im.clickSlot(handler.syncId, srcHandlerSlot, 0, SlotActionType.PICKUP, player);
+				im.clickSlot(handler.syncId, CRAFT_GRID_FIRST + i, 1, SlotActionType.PICKUP, player);
+				if (!handler.getCursorStack().isEmpty()) {
+					im.clickSlot(handler.syncId, srcHandlerSlot, 0, SlotActionType.PICKUP, player);
+				}
+				continue;
 			}
 			int gridSlot = CRAFT_GRID_FIRST + i;
-			// 右键拿起 1 个（避免整叠拿起），再放入合成格
-			im.clickSlot(handler.syncId, invToHandler(srcInv), 1, SlotActionType.PICKUP, player);
+			// 合成格已有该格所需材料（复用已放内容，避免重复消耗）
+			boolean gridHas = alternatives.stream()
+					.anyMatch(a -> stackMatches(handler.slots.get(gridSlot).getStack(), a));
+			if (gridHas) {
+				continue;
+			}
+			// ① 左键整堆拿起
+			im.clickSlot(handler.syncId, srcHandlerSlot, 0, SlotActionType.PICKUP, player);
 			if (handler.getCursorStack().isEmpty()) {
 				return Outcome.FAILED;
 			}
-			im.clickSlot(handler.syncId, gridSlot, 0, SlotActionType.PICKUP, player);
+			// ② 右键点合成格 → 精确放入 1 个
+			im.clickSlot(handler.syncId, gridSlot, 1, SlotActionType.PICKUP, player);
+			// ③ 剩余放回原背包槽（同物同 NBT 可叠回；药水 count=1 时光标已空）
 			if (!handler.getCursorStack().isEmpty()) {
-				// 合成格未接住（异常状态）：把光标残留倒回背包，终止
-				dumpCursor(im, handler, player);
-				return Outcome.FAILED;
+				im.clickSlot(handler.syncId, srcHandlerSlot, 0, SlotActionType.PICKUP, player);
+				if (!handler.getCursorStack().isEmpty()) {
+					// 原槽意外放不回：兑底找合并槽/空槽
+					dumpCursor(im, handler, player);
+				}
 			}
 		}
 		return Outcome.SUCCESS;
@@ -172,7 +204,7 @@ public final class SscGridClickTransfer {
 		return invIndex < 9 ? 37 + invIndex : 1 + invIndex;
 	}
 
-	/** 背包（含热bar）里找到与候选任一完全一致的栈（Item+NBT），返回背包索引；找不到返回 -1。 */
+	/** 背包（含热bar）里找到与候选任一匹配的栈，返回背包索引；找不到返回 -1。 */
 	private static int findAnyStack(ClientPlayerEntity player, List<ItemStack> alternatives) {
 		PlayerInventory inv = player.getInventory();
 		for (int i = 0; i < PlayerInventory.MAIN_SIZE; i++) {
@@ -181,7 +213,7 @@ public final class SscGridClickTransfer {
 				continue;
 			}
 			for (ItemStack alt : alternatives) {
-				if (ItemStack.areEqual(s, alt)) {
+				if (stackMatches(s, alt)) {
 					return i;
 				}
 			}
@@ -189,12 +221,35 @@ public final class SscGridClickTransfer {
 		return -1;
 	}
 
-	/** 背包里能合并 want 的槽（同物同 NBT 未满叠）或空槽；无则 -1。 */
+	/** 语义匹配（与配方 matches 一致，忽略数量）：物品同 + NBT 同（canCombine 不含 count）；
+	 * 药水类退化为「同物品 + 药水类型(Potion id)相等」。
+	 * 注意：不能用 areEqual——它还比较 count，display 候选恒 count=1，
+	 * 背包堆叠材料永远匹配不上（REI 侧踩过的坑）。 */
+	private static boolean stackMatches(ItemStack have, ItemStack want) {
+		if (ItemStack.canCombine(have, want)) {
+			return true;
+		}
+		if (have.getItem() != want.getItem()) {
+			return false;
+		}
+		if (isPotionBottle(have) && isPotionBottle(want)) {
+			return PotionUtil.getPotion(have).equals(PotionUtil.getPotion(want));
+		}
+		return false;
+	}
+
+	private static boolean isPotionBottle(ItemStack s) {
+		return s.isOf(net.minecraft.item.Items.POTION)
+				|| s.isOf(net.minecraft.item.Items.SPLASH_POTION)
+				|| s.isOf(net.minecraft.item.Items.LINGERING_POTION);
+	}
+
+	/** 背包里能合并 want 的槽（同物同 NBT 未满叠，忽略数量）或空槽；无则 -1。 */
 	private static int findMergeTarget(ClientPlayerEntity player, ItemStack want) {
 		PlayerInventory inv = player.getInventory();
 		for (int i = 0; i < PlayerInventory.MAIN_SIZE; i++) {
 			ItemStack s = inv.getStack(i);
-			if (!s.isEmpty() && ItemStack.areEqual(s, want) && s.getCount() < s.getMaxCount()) {
+			if (!s.isEmpty() && ItemStack.canCombine(s, want) && s.getCount() < s.getMaxCount()) {
 				return i;
 			}
 		}
@@ -206,7 +261,7 @@ public final class SscGridClickTransfer {
 		return -1;
 	}
 
-	/** 是否持有全部材料：每格取背包已有的候选，同物品跨格合并计数。 */
+	/** 是否持有全部材料：每格取背包已有的候选（语义匹配，忽略数量），同物品跨格合并计数。 */
 	private static boolean hasAllMaterials(ClientPlayerEntity player, List<List<ItemStack>> perSlot) {
 		List<ItemStack> need = new ArrayList<>();
 		for (List<ItemStack> alts : perSlot) {
@@ -221,7 +276,7 @@ public final class SscGridClickTransfer {
 			chosen.setCount(1);
 			boolean merged = false;
 			for (ItemStack n : need) {
-				if (ItemStack.areEqual(n, chosen)) {
+				if (stackMatches(n, chosen)) {
 					n.increment(1);
 					merged = true;
 					break;
@@ -240,7 +295,7 @@ public final class SscGridClickTransfer {
 				continue;
 			}
 			for (ItemStack n : need) {
-				if (n.getCount() > 0 && ItemStack.areEqual(s, n)) {
+				if (n.getCount() > 0 && stackMatches(s, n)) {
 					int take = Math.min(n.getCount(), s.getCount());
 					n.decrement(take);
 				}

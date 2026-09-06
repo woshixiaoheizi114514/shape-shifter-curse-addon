@@ -42,6 +42,24 @@ public class SscSpecialCraftingDisplay extends DefaultCraftingDisplay<net.minecr
 		return requiredPerSlot;
 	}
 
+	/** 仅构建「每格材料需求」（转移处理器对 REI 自动生成卡片复用），不创建卡片。 */
+	public static List<List<ItemStack>> requiredOf(ItemStack[][] grid3x3) {
+		List<List<ItemStack>> required = new ArrayList<>(9);
+		for (int i = 0; i < 9; i++) {
+			ItemStack[] alts = grid3x3[i];
+			List<ItemStack> altList = new ArrayList<>();
+			if (alts != null) {
+				for (ItemStack alt : alts) {
+					if (alt != null && !alt.isEmpty()) {
+						altList.add(alt);
+					}
+				}
+			}
+			required.add(altList);
+		}
+		return required;
+	}
+
 	/** 便捷构造：单候选材料网格直接转 EntryIngredient。 */
 	public static SscSpecialCraftingDisplay of(ItemStack[][] grid3x3, ItemStack output) {
 		List<EntryIngredient> inputs = new ArrayList<>(9);
