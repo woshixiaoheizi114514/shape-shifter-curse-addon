@@ -10,12 +10,17 @@ import net.minecraft.world.World;
  *   <li>{@code Spell}（String）：魔法 id 的 path（命名空间恒 ssc_addon）；</li>
  *   <li>{@code Uses}（int）：单独使用剩余次数（放入魔法书后不消耗，仅决定书内效果的耐久缩放比）；</li>
  *   <li>{@code Cd}（long）：单独使用时的冷却结束世界时间（放书内不用，书内 cd 存在书 NBT）。</li>
+ *   <li>{@code Level}（int）：魔法等级（1-5，固定不可升级，只能开箱获得更高等级卷轴；缺省 1）。</li>
  * </ul>
  */
 public final class ScrollData {
 	public static final String NBT_SPELL = "Spell";
 	public static final String NBT_USES = "Uses";
 	public static final String NBT_CD = "Cd";
+	public static final String NBT_LEVEL = "Level";
+
+	/** 魔法等级上限。 */
+	public static final int MAX_SPELL_LEVEL = 5;
 
 	private ScrollData() {
 	}
@@ -29,24 +34,24 @@ public final class ScrollData {
 		return SpellRegistry.get(nbt.getString(NBT_SPELL));
 	}
 
-	/** 剩余单独使用次数（未初始化时按稀有度上限）。 */
+	/** 剩余单独使用次数（未初始化时按等级对应品质的上限）。 */
 	public static int getUses(ItemStack stack) {
 		NbtCompound nbt = stack.getNbt();
 		if (nbt != null && nbt.contains(NBT_USES)) {
 			return nbt.getInt(NBT_USES);
 		}
 		Spell spell = getSpell(stack);
-		return spell == null ? 0 : spell.getRarity().soloUses;
+		return spell == null ? 0 : spell.getRarity(getLevel(stack)).soloUses;
 	}
 
 	public static void setUses(ItemStack stack, int uses) {
 		stack.getOrCreateNbt().putInt(NBT_USES, Math.max(0, uses));
 	}
 
-	/** 该卷轴稀有度的单独使用次数上限。 */
+	/** 该卷轴等级对应品质的单独使用次数上限。 */
 	public static int getMaxUses(ItemStack stack) {
 		Spell spell = getSpell(stack);
-		return spell == null ? 0 : spell.getRarity().soloUses;
+		return spell == null ? 0 : spell.getRarity(getLevel(stack)).soloUses;
 	}
 
 	/**
@@ -89,12 +94,33 @@ public final class ScrollData {
 		return getSpell(stack) != null;
 	}
 
-	/** 新建一张绑定指定魔法的卷轴（次数按稀有度上限）。 */
-	public static ItemStack create(String spellPath) {
+	/** 魔法等级（1-5；无字段或缺省时为 1，与旧存档卷轴兼容）。 */
+	public static int getLevel(ItemStack stack) {
+		NbtCompound nbt = stack.getNbt();
+		if (nbt != null && nbt.contains(NBT_LEVEL)) {
+			return Math.max(1, Math.min(MAX_SPELL_LEVEL, nbt.getInt(NBT_LEVEL)));
+		}
+		return 1;
+	}
+
+	/** 写入魔法等级（内部工具/战利品生成用；等级固定不可升级，正常游玩无升级途径）。 */
+	public static void setLevel(ItemStack stack, int level) {
+		stack.getOrCreateNbt().putInt(NBT_LEVEL, Math.max(1, Math.min(MAX_SPELL_LEVEL, level)));
+	}
+
+	/** 新建一张绑定指定魔法的卷轴（次数按品质上限；可选指定等级，0/缺省=1）。 */
+	public static ItemStack create(String spellPath, int level) {
 		ItemStack stack = new ItemStack(net.jackcooper.shapeShifterCurseAddon.SscAddon.MAGIC_SCROLL);
 		Spell spell = SpellRegistry.get(spellPath);
 		stack.getOrCreateNbt().putString(NBT_SPELL, spellPath);
-		stack.getOrCreateNbt().putInt(NBT_USES, spell == null ? 0 : spell.getRarity().soloUses);
+		int lv = Math.max(1, Math.min(MAX_SPELL_LEVEL, level == 0 ? 1 : level));
+		stack.getOrCreateNbt().putInt(NBT_LEVEL, lv);
+		stack.getOrCreateNbt().putInt(NBT_USES, spell == null ? 0 : spell.getRarity(lv).soloUses);
 		return stack;
+	}
+
+	/** 新建一张绑定指定魔法的卷轴（1 级，次数按品质上限）。 */
+	public static ItemStack create(String spellPath) {
+		return create(spellPath, 1);
 	}
 }

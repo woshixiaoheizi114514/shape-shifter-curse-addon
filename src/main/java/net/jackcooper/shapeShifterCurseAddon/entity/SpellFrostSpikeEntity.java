@@ -4,6 +4,9 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.FlyingItemEntity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.data.DataTracker;
+import net.minecraft.entity.data.TrackedData;
+import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.item.ItemStack;
@@ -19,6 +22,7 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.jackcooper.shapeShifterCurseAddon.SscAddon;
@@ -37,6 +41,10 @@ public class SpellFrostSpikeEntity extends ProjectileEntity implements FlyingIte
 	private static final double SPEED = 0.75;        // 15 格/秒
 	private static final double MAX_DISTANCE = 50.0; // 最大飞行距离
 
+	/** 魔法等级（1-5），DataTracker 同步供渲染端切换 L4+ 3D 冰锥模型。 */
+	private static final TrackedData<Integer> LEVEL =
+			DataTracker.registerData(SpellFrostSpikeEntity.class, TrackedDataHandlerRegistry.INTEGER);
+
 	private Vec3d startPos;
 	private int ticksAlive = 0;
 	private float damage = 6.0f;
@@ -53,20 +61,41 @@ public class SpellFrostSpikeEntity extends ProjectileEntity implements FlyingIte
 		this.startPos = this.getPos();
 	}
 
+	@Override
+	protected void initDataTracker() {
+		// 不调 super（Entity 的抽象方法无法跨两级访问；dataTracker 由 Entity 构造器初始化，同 ThrownWaterSpearEntity 写法）
+		this.dataTracker.startTracking(LEVEL, 1);
+	}
+
 	/** 设置冰锥命中伤害。 */
 	public void setDamage(float damage) {
 		this.damage = damage;
 	}
 
-	/** 设置飞行方向（朝准星）。 */
-	public void setDirection(Vec3d direction) {
-		Vec3d velocity = direction.normalize().multiply(SPEED);
-		this.setVelocity(velocity.x, velocity.y, velocity.z);
+	/** 魔法等级（1-5；L4+ 渲染端换 3D 冰锥模型）。 */
+	public int getSpellLevel() {
+		return this.dataTracker.get(LEVEL);
 	}
 
-	@Override
-	protected void initDataTracker() {
-		// 无需额外数据追踪器
+	/** 设置魔法等级（服务端施法时调用，DataTracker 自动同步客户端）。 */
+	public void setLevel(int level) {
+		this.dataTracker.set(LEVEL, Math.max(1, Math.min(5, level)));
+	}
+
+	/** 设置飞行方向（朝准星），速度按等级倍率缩放。 */
+	public void setDirection(Vec3d direction, float speedMultiplier) {
+		Vec3d velocity = direction.normalize().multiply(SPEED * speedMultiplier);
+		this.setVelocity(velocity.x, velocity.y, velocity.z);
+		updateRotationFromVelocity(velocity);
+	}
+
+	/** 按速度自算朝向（与寒棘狐冰锥同款公式：尖朝速度方向），供 3D 模型渲染对正。 */
+	private void updateRotationFromVelocity(Vec3d v) {
+		double horiz = Math.sqrt(v.x * v.x + v.z * v.z);
+		this.setYaw((float) (MathHelper.atan2(-v.x, v.z) * (180.0 / Math.PI)));
+		this.setPitch((float) (MathHelper.atan2(-v.y, horiz) * (180.0 / Math.PI)));
+		this.prevYaw = this.getYaw();
+		this.prevPitch = this.getPitch();
 	}
 
 	@Override
@@ -87,14 +116,18 @@ public class SpellFrostSpikeEntity extends ProjectileEntity implements FlyingIte
 			return;
 		}
 
-		// 超距 / 超时自毁
-		if (startPos != null && this.squaredDistanceTo(startPos) > MAX_DISTANCE * MAX_DISTANCE) {
-			this.discard();
-			return;
-		}
-		if (ticksAlive > 100) { // 5 秒超时
-			this.discard();
-			return;
+		// 超距 / 超时自毁（仅服务端权威）：客户端实体经网络包构造，startPos 恒为 (0,0,0)，
+		// 若双端执行会在离原点 50 格外第一 tick 就误删客户端实体 → 模型永不显示（只剩服务端粒子）。
+		// 客户端实体的消失由服务端 discard 后的 tracker 移除包驱动，天然多人同步。
+		if (!this.getWorld().isClient) {
+			if (startPos != null && this.squaredDistanceTo(startPos) > MAX_DISTANCE * MAX_DISTANCE) {
+				this.discard();
+				return;
+			}
+			if (ticksAlive > 100) { // 5 秒超时
+				this.discard();
+				return;
+			}
 		}
 
 		// 飞行拖尾粒子（服务端撒，天然多人同步）
@@ -152,6 +185,9 @@ public class SpellFrostSpikeEntity extends ProjectileEntity implements FlyingIte
 		if (nbt.contains("Damage")) {
 			this.damage = nbt.getFloat("Damage");
 		}
+		if (nbt.contains("SpellLevel")) {
+			setLevel(nbt.getInt("SpellLevel"));
+		}
 	}
 
 	@Override
@@ -163,6 +199,7 @@ public class SpellFrostSpikeEntity extends ProjectileEntity implements FlyingIte
 			nbt.putDouble("StartZ", startPos.z);
 		}
 		nbt.putFloat("Damage", this.damage);
+		nbt.putInt("SpellLevel", getSpellLevel());
 	}
 
 	@Override

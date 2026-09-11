@@ -29,11 +29,28 @@ import net.onixary.shapeShifterCurseFabric.util.UIPositionUtils;
 @Environment(EnvType.CLIENT)
 public class SpellbookHudRenderer implements HudRenderCallback {
 
-	// 槽位双状态贴图：_empty=空槽（无魔法时显示），_filled=「有东西」边框（有魔法时叠在图标上方，中间透明露出图标）
+	// 槽位双状态贴图：_empty=空槽（无魔法时显示），_filled=「空白框」覆盖层（无魔法时叠在最上层）
 	private static final Identifier TEX_SLOT_EMPTY = new Identifier("ssc_addon", "textures/gui/spell_hud_slot_empty.png");
 	private static final Identifier TEX_SLOT_FILLED = new Identifier("ssc_addon", "textures/gui/spell_hud_slot_filled.png");
 	private static final Identifier TEX_SLOT_BIG_EMPTY = new Identifier("ssc_addon", "textures/gui/spell_hud_slot_big_empty.png");
 	private static final Identifier TEX_SLOT_BIG_FILLED = new Identifier("ssc_addon", "textures/gui/spell_hud_slot_big_filled.png");
+	// 品质覆盖层（有魔法时叠在最上层，按卷轴稀有度选色；顺序与 SpellRarity 枚举一致：白/绿/蓝/紫/橙/红）
+	private static final Identifier[] TEX_SLOT_RARITY = {
+			new Identifier("ssc_addon", "textures/gui/spell_hud_slot_rarity_white.png"),
+			new Identifier("ssc_addon", "textures/gui/spell_hud_slot_rarity_green.png"),
+			new Identifier("ssc_addon", "textures/gui/spell_hud_slot_rarity_blue.png"),
+			new Identifier("ssc_addon", "textures/gui/spell_hud_slot_rarity_purple.png"),
+			new Identifier("ssc_addon", "textures/gui/spell_hud_slot_rarity_orange.png"),
+			new Identifier("ssc_addon", "textures/gui/spell_hud_slot_rarity_red.png")
+	};
+	private static final Identifier[] TEX_SLOT_BIG_RARITY = {
+			new Identifier("ssc_addon", "textures/gui/spell_hud_slot_big_rarity_white.png"),
+			new Identifier("ssc_addon", "textures/gui/spell_hud_slot_big_rarity_green.png"),
+			new Identifier("ssc_addon", "textures/gui/spell_hud_slot_big_rarity_blue.png"),
+			new Identifier("ssc_addon", "textures/gui/spell_hud_slot_big_rarity_purple.png"),
+			new Identifier("ssc_addon", "textures/gui/spell_hud_slot_big_rarity_orange.png"),
+			new Identifier("ssc_addon", "textures/gui/spell_hud_slot_big_rarity_red.png")
+	};
 	// 法力条双态贴图：_empty=空条(底,含金框与中心装饰)，_full=满条(按法力%从左裁剪叠上)
 	private static final Identifier TEX_BAR_EMPTY = new Identifier("ssc_addon", "textures/gui/spell_hud_bar_empty.png");
 	private static final Identifier TEX_BAR_FULL = new Identifier("ssc_addon", "textures/gui/spell_hud_bar_full.png");
@@ -56,11 +73,13 @@ public class SpellbookHudRenderer implements HudRenderCallback {
 		if (sel >= count) {
 			sel = 0;
 		}
-		// 左右槽 = 沿非空槽推导的上一/下一技能（与 cycleSelected 同逻辑，空槽不参与循环）
+		// 左右槽 = 沿非空槽推导的上一/下一技能（与 cycleSelected 同逻辑，空槽不参与循环）。
+		// 全空时不再隐藏整个 UI：改画三槽空白框 + 法力条（空槽有 filled 空白框覆盖层，与空槽设计一致）
 		int prev = SpellbookData.nextFilledSlot(book, sel, -1);
 		int next = SpellbookData.nextFilledSlot(book, sel, +1);
-		if (prev < 0 || next < 0) {
-			return; // 全空：不画选择器
+		boolean allEmpty = prev < 0 || next < 0;
+		if (allEmpty) {
+			prev = next = sel; // 全空：三槽都画当前选中位（全为空白框）
 		}
 
 		// HUD 整体位置：由 SSCAddonClientConfig 九宫格锚点 + 偏移决定（BarPositionEditorScreen 可视化编辑）
@@ -134,7 +153,7 @@ public class SpellbookHudRenderer implements HudRenderCallback {
 				ctx.drawItem(scroll, iconX, iconY);
 			}
 		}
-		// 顶层：有东西边框（始终画）+ 冷却遮罩，都要压在图标上方，故整体抬高 z 再绘制
+		// 顶层：品质覆盖层 + 冷却遮罩，都要压在图标上方，故整体抬高 z 再绘制
 		ctx.getMatrices().push();
 		ctx.getMatrices().translate(0, 0, 260);
 		// 冷却遮罩：三个槽各自独立显示（冷却是按槽存书 NBT 的，切槽后原槽 cd 仍在走，
@@ -142,13 +161,23 @@ public class SpellbookHudRenderer implements HudRenderCallback {
 		if (spell != null && spell.getBaseCooldownTicks() > 0) {
 			long cdRem = SpellbookData.getCooldownRemaining(book, slot, mc.world);
 			if (cdRem > 0) {
-				float frac = Math.min(1f, cdRem / (float) spell.getBaseCooldownTicks());
+				// 分母用等级后实际 CD（等级 CD 缩减后若仍用基础 CD，遮罩比例会偏小、退得比真实慢）
+				int level = ScrollData.getLevel(scroll);
+				int totalCd = Math.round(spell.getBaseCooldownTicks() * spell.getCooldownMultiplier(level));
+				float frac = totalCd > 0 ? Math.min(1f, cdRem / (float) totalCd) : 1f;
 				int maskH = Math.round(size * frac);
 				ctx.fill(x, y + size - maskH, x + size, y + size, 0x99000000);
 			}
 		}
-		// 有东西边框叠在最上层（边框中间透明，露出下方的图标 / 空白）
-		ctx.drawTexture(big ? TEX_SLOT_BIG_FILLED : TEX_SLOT_FILLED, x - 1, y - 1, 0, 0, fs, fs, fs, fs);
+		// 最上层覆盖层：有魔法→按卷轴稀有度选品质框（白/绿/蓝/紫/橙/红，中间透明露出图标）；
+		// 无魔法→空白框（filled，即「技能槽 空白」贴图）
+		if (hasSpell && spell != null) {
+			// 有效品质按等级派生（冰锥：1白/2绿/3蓝/4紫/5橙），HUD 边框颜色一眼看出等级
+			Identifier rarityTex = (big ? TEX_SLOT_BIG_RARITY : TEX_SLOT_RARITY)[spell.getRarity(ScrollData.getLevel(scroll)).ordinal()];
+			ctx.drawTexture(rarityTex, x - 1, y - 1, 0, 0, fs, fs, fs, fs);
+		} else {
+			ctx.drawTexture(big ? TEX_SLOT_BIG_FILLED : TEX_SLOT_FILLED, x - 1, y - 1, 0, 0, fs, fs, fs, fs);
+		}
 		ctx.getMatrices().pop();
 	}
 }
